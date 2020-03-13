@@ -2,7 +2,7 @@
 %%% The bulk of this code was written by Mathew Halm for purposes of
 %%% plotting a quadrotor in MEAM 517. It was adapted for use in plotting
 %%% the planar qbit.
-function qbit_plot_trajectory(h, t, x_vec, x_d, z_d, Fdes, l, save)
+function qbit_animate_trajectory(h, t, x_vec, x_d, z_d, Fdes, l, save)
 % INPUTS
 % h - FIGURE OBJECT
 % t - [1xn] time vector

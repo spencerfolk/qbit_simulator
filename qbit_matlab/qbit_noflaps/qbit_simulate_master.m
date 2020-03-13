@@ -244,7 +244,7 @@ Fdes(:,end) = Fdes(:,end-1);
 
 if animate == true
     h = figure();
-    qbit_plot_trajectory(h, time,[x ; z ; phi], desired_state(1,:), desired_state(2,:),Fdes,l, save_animation)
+    qbit_animate_trajectory(h, time,[x ; z ; phi], desired_state(1,:), desired_state(2,:),Fdes,l, save_animation)
     hold on
     plot(waypoints(1,:),waypoints(2,:),'ko','linewidth',2)
     axis equal
