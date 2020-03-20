@@ -8,14 +8,14 @@ clc
 close all
 
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
-animate = false; % Bool for making an animation of the vehicle. 
+animate = true; % Bool for making an animation of the vehicle. 
 save_animation = false; % Bool for saving the animation as a gif
 
 %% Initialize Constants
 in2m = 0.0254;
 g = 9.81;
 rho = 1.2;
-nu = 0.0;   % Efficiency of the down wash on the wings from the propellers
+eta = 1;   % Efficiency of the down wash on the wings from the propellers
 
 % Ritz tailsitter
 % m = 0.150;
@@ -60,10 +60,15 @@ c2 = 0.61929;  % coeff acts as a scaling factor on Cd
 % c1 = 0;
 % c2 = 1;
 
+%% Generate Airfoil Look-up
+% This look up table data will be used to estimate lift, drag, moment given
+% the angle of attack and interpolation from this data.
+[alpha_data, cl_data, cd_data, cm_data] = aero_lookup("naca_0015_experimental_Re-160000.csv");
+
 %% Trajectory Generation
 % Provide waypoints and use splines to generate continuous functions of
 % time between them
-V_s = 2;
+V_s = 4;
 
 waypoints = [0,40; 0,0];
 % waypoints = [0,0,10 ; 0,10,10];  % aggressive maneuver
@@ -172,7 +177,7 @@ for i = 2:length(time)
     T_avg = 0.5*(T_top(i-1) + T_bot(i-1));
     
 %     Vw(i-1) = 1.2*sqrt( T_avg/(8*rho*pi*R^2) );
-    Vw(i-1) = nu*sqrt( (Vi(i-1)*cos(phi(i-1)-gamma(i-1)))^2 + (T_avg/(0.5*rho*pi*R^2)) );
+    Vw(i-1) = eta*sqrt( (Vi(i-1)*cos(phi(i-1)-gamma(i-1)))^2 + (T_avg/(0.5*rho*pi*R^2)) );
     
     % Compute true airspeed over the wings using law of cosines
     Va(i-1) = sqrt( Vi(i-1)^2 + Vw(i-1)^2 + 2*Vi(i-1)*Vw(i-1)*cos( alpha(i-1)) );
@@ -185,10 +190,11 @@ for i = 2:length(time)
     end
     
     if aero == true
-%         Cl = 2*sin(3*alpha_e(i-1))*cos(3*alpha_e(i-1));
-%         Cd = 2*sin(alpha_e(i-1))^2;
-%         Cm = 0.5*sin(3*alpha_e(i-1))*cos(3*alpha_e(i-1));
-        [Cl, Cd, Cm] = aero_fns(c0, c1, c2, alpha_e(i-1));
+%         [Cl, Cd, Cm] = aero_fns(c0, c1, c2, alpha_e(i-1));
+        Cl = interp1(alpha_data, cl_data, alpha_e(i-1));
+        Cd = interp1(alpha_data, cd_data, alpha_e(i-1));
+        Cm = interp1(alpha_data, cm_data, alpha_e(i-1));
+        
     else
         Cl = 0;
         Cd = 0;
@@ -239,6 +245,7 @@ T_top(end) = T_top(end-1);
 T_bot(end) = T_bot(end-1);
 
 Fdes(:,end) = Fdes(:,end-1);
+
 
 %% Simulation
 
@@ -350,7 +357,8 @@ xlabel("Time (s)")
 grid on
 
 figure()
-sgtitle("Misc Angles")
+titl = strcat("Misc Angles, \eta = ",num2str(eta));
+sgtitle(titl)
 
 subplot(3,1,1)
 plot(time, alpha, 'r-','linewidth',1.5)
@@ -359,6 +367,7 @@ plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
 plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
 ylabel('\alpha [rad]')
 xlim([0,time(end)])
+% xlim([0,18])
 grid on
 
 subplot(3,1,2)
@@ -368,6 +377,10 @@ plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
 plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
 ylabel('\alpha_e [rad]')
 xlim([0,time(end)])
+maxi = find(alpha_e == max(alpha_e));
+plot(time(maxi),alpha_e(maxi),'ro','linewidth',2)
+text(8,-1,strcat("max(\alpha_e) = ",num2str(max(alpha_e)),"-rad"))
+% xlim([0,18])
 grid on
 
 subplot(3,1,3)
@@ -377,6 +390,7 @@ plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
 plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
 ylabel('\gamma [rad]')
 xlim([0,time(end)])
+% xlim([0,18])
 xlabel("Time (s)")
 grid on
 

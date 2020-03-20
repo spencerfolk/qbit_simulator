@@ -5,8 +5,9 @@ clc
 close all
 
 %% Read in data file
-sizeA = [7, 110];
+sizeA = [7, inf];
 formatSpec = '%f %f %f %f %f %f %f';
+
 
 fileID = fopen('NACA_0021_1e6.txt');
 A = fscanf(fileID, formatSpec, sizeA);
@@ -21,7 +22,7 @@ cd = A(:,3);
 
 
 %% Estimating coefficients on aero function based on 
-c0 = 10;
+c0 = 0;
 c1 = cd(alpha == 0);
 c2 = 0.5;
 
@@ -30,6 +31,8 @@ cl_error_deriv_table = [];
 cl_error_deriv = 100;
 cl_error_table = [];
 cl_error = 100;
+
+a = 0.02;  % Step size
 
 while abs(cl_error_deriv) > 1e-3
 %     [cl_fit, cd_fit, cm_fit] = aero_fns(10, alpha);
@@ -41,9 +44,9 @@ while abs(cl_error_deriv) > 1e-3
     error_upp = sum((cl_fit_upp - cl).^2);
     error_low = sum((cl_fit_low - cl).^2);
     
-    cl_error_deriv = (error_upp - error_low)/0.02;
+    cl_error_deriv = (error_upp - error_low)/a;
     
-    c0 = c0 - cl_error_deriv*0.02;
+    c0 = c0 - cl_error_deriv*a;
     
     i = i+1;
     
@@ -70,9 +73,9 @@ while abs(cd_error_deriv) > 1e-3
     error_upp = sum((cd_fit_upp - cd).^2);
     error_low = sum((cd_fit_low - cd).^2);
     
-    cd_error_deriv = (error_upp - error_low)/0.02;
+    cd_error_deriv = (error_upp - error_low)/a;
     
-    c2 = c2 - cd_error_deriv*0.02;
+    c2 = c2 - cd_error_deriv*a;
     
     i = i+1;
     
@@ -108,7 +111,7 @@ title("Lift")
 xlim([-20, 20])
 ylim([-1.5, 1.5])
 ylabel("C_L")
-legend("XFoil - NACA 0021 @ Re=1e6","Trig Functions",'location','northwest')
+legend("XFoil - NACA 0015 @ Re=1e6","Trig Functions",'location','northwest')
 
 subplot(2,1,2)
 plot(alpha*180/pi, cd,'g*','linewidth',1)
