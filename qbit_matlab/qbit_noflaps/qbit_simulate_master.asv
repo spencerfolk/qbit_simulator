@@ -8,14 +8,14 @@ clc
 close all
 
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
-animate = false; % Bool for making an animation of the vehicle. 
+animate = true; % Bool for making an animation of the vehicle. 
 save_animation = false; % Bool for saving the animation as a gif
 
 %% Initialize Constants
 in2m = 0.0254;
 g = 9.81;
 rho = 1.2;
-eta = 0.6;   % Efficiency of the down wash on the wings from the propellers
+eta = 1;   % Efficiency of the down wash on the wings from the propellers
 
 % Ritz tailsitter
 % m = 0.150;
@@ -68,7 +68,7 @@ c2 = 0.61929;  % coeff acts as a scaling factor on Cd
 %% Trajectory Generation
 % Provide waypoints and use splines to generate continuous functions of
 % time between them
-V_s = 5;
+V_s = 10;
 
 waypoints = [0,40; 0,0];
 % waypoints = [0,0,10 ; 0,10,10];  % aggressive maneuver
@@ -170,11 +170,7 @@ for i = 2:length(time)
     Vi(i-1) = sqrt( xdot(i-1)^2 + zdot(i-1)^2 );
     
     % Compute orientations
-    if abs(Vi(i-1)) >= 1e-5
-        gamma(i-1) = atan2(zdot(i-1), xdot(i-1));  % Inertial orientation
-    else
-        gamma(i-1) = 0;
-    end
+    gamma(i-1) = atan2(zdot(i-1), xdot(i-1));  % Inertial orientation
     alpha(i-1) = phi(i-1) - gamma(i-1);  % Angle of attack strictly based on inertial speed
     
     % Get prop wash over wing via momentum theory
@@ -195,9 +191,9 @@ for i = 2:length(time)
     
     if aero == true
 %         [Cl, Cd, Cm] = aero_fns(c0, c1, c2, alpha_e(i-1));
-        Cl = interp1(alpha_data, cl_data, alpha_e(i-1)*180/pi);
-        Cd = interp1(alpha_data, cd_data, alpha_e(i-1)*180/pi);
-        Cm = interp1(alpha_data, cm_data, alpha_e(i-1)*180/pi);
+        Cl = interp1(alpha_data, cl_data, alpha_e(i-1));
+        Cd = interp1(alpha_data, cd_data, alpha_e(i-1));
+        Cm = interp1(alpha_data, cm_data, alpha_e(i-1));
         
     else
         Cl = 0;
@@ -208,7 +204,7 @@ for i = 2:length(time)
     
     L(i-1) = 0.5*rho*Va(i-1)^2*(chord*span)*Cl;
     D(i-1) = 0.5*rho*Va(i-1)^2*(chord*span)*Cd;
-    M_air(i-1) = 0.5*rho*Va(i-1)^2*(chord*span)*chord*Cm;
+    M_air(i-1) = 0.5*rho*Va(i-1)^2*(chord*span)*chord*Cm*0;
     
 %     fprintf("\nIndex = %d",i)
 %     if i == 226
@@ -379,13 +375,12 @@ plot(time, alpha_e, 'k-','linewidth',1.5)
 hold on
 plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
 plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
-plot(time, ones(size(time))*10*pi/180, 'g--', 'linewidth', 1)
 ylabel('\alpha_e [rad]')
 xlim([0,time(end)])
 % xlim([0,18])
 maxi = find(alpha_e == max(alpha_e));
 plot(time(maxi),alpha_e(maxi),'ro','linewidth',2)
-text(end_time/2,-1,strcat("max(\alpha_e) = ",num2str(max(alpha_e)),"-rad"))
+text(e,-1,strcat("max(\alpha_e) = ",num2str(max(alpha_e)),"-rad"))
 grid on
 
 subplot(3,1,3)

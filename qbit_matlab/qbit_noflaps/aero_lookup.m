@@ -4,6 +4,7 @@ function [alpha_data, cl_data, cd_data, cm_data] = aero_lookup(filename)
 %%% Spencer Folk 2020
 
 % Read in the polars and extract data
+% filename = "naca_0015_experimental_Re-160000.csv";
 polars = readmatrix(filename);
 
 alpha_data = [-flipud(polars(:,1)) ; polars(2:end,1)];
