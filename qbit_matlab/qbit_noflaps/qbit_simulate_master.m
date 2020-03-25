@@ -1,6 +1,6 @@
 %%% Simulating the dynamics of the qbit. This script will establish state
 %%% variables, get a trajectory, input that trajectory into a controller to
-%%% get commands, and simulate the dynamis subject to those inputs. 
+%%% get commands, and simulate the dynamis subject to those inputs.
 %%% Spencer Folk 2020
 
 clear
@@ -8,14 +8,15 @@ clc
 close all
 
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
-animate = false; % Bool for making an animation of the vehicle. 
+animate = false; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
+traj_type = "trim"; % Type of trajectory, "cubic" or "trim" (for steady state flight)
 
 %% Initialize Constants
 in2m = 0.0254;
 g = 9.81;
 rho = 1.2;
-eta = 0.6;   % Efficiency of the down wash on the wings from the propellers
+eta = 0.0;   % Efficiency of the down wash on the wings from the propellers
 
 % Ritz tailsitter
 % m = 0.150;
@@ -66,29 +67,47 @@ c2 = 0.61929;  % coeff acts as a scaling factor on Cd
 [alpha_data, cl_data, cd_data, cm_data] = aero_lookup("naca_0015_experimental_Re-160000.csv");
 
 %% Trajectory Generation
-% Provide waypoints and use splines to generate continuous functions of
-% time between them
-V_s = 5;
+% Generate a trajectory based on the method selected. If cubic, use cubic
+% splines. If trim, create a constant speed, trim flight.
+V_s = 15;
+end_time = 10;   % Duration of trajectory, this will be rewritten if cubic spline is selected
 
-waypoints = [0,40; 0,0];
-% waypoints = [0,0,10 ; 0,10,10];  % aggressive maneuver
-% waypoints = [0,20,40 ; 0,0,0];  % Straight line horizontal trajectory
-% waypoints = [0,80,160 ; 0,0,0];  % Straight line horizontal trajectory, longer
-% waypoints = [0,0,0 ; 0, 20, 40]; % Straight line vertical trajectory
-% waypoints = [0,10,40 ; 0,10,10];  % Larger distance shows off lift benefit
-% waypoints = [0,20,40 ; 0,5,10]; % diagonal
-% waypoints = [0,10,20,30,40 ; 0,10,0,-10,0]; % zigzag
-% waypoints = [0,0 ; 0, -10];  % Drop
-% waypoints = [0,0 ; 0, 10];  % rise
-
-% if waypoints(1,1) ~= x(1) && waypoints(2,1) ~= z(1)
-%     waypoints = horzcat([x(1);z(1)],waypoints);
-% end
-[traj_obj, end_time] = qbit_trajectory_generator(waypoints, V_s);
-
-% Use this traj_obj to get our desired x,z at a given time t
-traj_obj_dot = fnder(traj_obj,1);
-traj_obj_dotdot = fnder(traj_obj,2);
+if traj_type == "cubic"
+    waypoints = [0,40; 0,0];
+    % waypoints = [0,0,10 ; 0,10,10];  % aggressive maneuver
+    % waypoints = [0,20,40 ; 0,0,0];  % Straight line horizontal trajectory
+    % waypoints = [0,80,160 ; 0,0,0];  % Straight line horizontal trajectory, longer
+    % waypoints = [0,0,0 ; 0, 20, 40]; % Straight line vertical trajectory
+    % waypoints = [0,10,40 ; 0,10,10];  % Larger distance shows off lift benefit
+    % waypoints = [0,20,40 ; 0,5,10]; % diagonal
+    % waypoints = [0,10,20,30,40 ; 0,10,0,-10,0]; % zigzag
+    % waypoints = [0,0 ; 0, -10];  % Drop
+    % waypoints = [0,0 ; 0, 10];  % rise
+    
+    [traj_obj, end_time] = qbit_trajectory_generator(waypoints, V_s);
+    
+    % Use this traj_obj to get our desired x,z at a given time t
+    traj_obj_dot = fnder(traj_obj,1);
+    traj_obj_dotdot = fnder(traj_obj,2);
+    
+    init_conds = [m*g/2; m*g/2 ; pi/2];
+elseif traj_type == "trim"
+    % In the trim mode, we have to have a good initial guess for the trim
+    % condition, so that the QBiT isn't too far from the steady state value
+    % at the beginning of the trajectory!
+    
+    % This involves solving for T_top(0), T_bot(0), phi(0)
+    x0 = [m*g/2; m*g/2; pi/4];
+    fun = @(x) trim_flight(x, alpha_data, cl_data, cd_data, cm_data, m,g,l, chord, span, rho, V_s);
+    init_conds = fsolve(fun, x0);
+    
+    fprintf("\nTrim estimate solved: \n")
+    fprintf("\nT_top = %3.2f",init_conds(1))
+    fprintf("\nT_bot = %3.2f",init_conds(2))
+    fprintf("\nphi   = %3.2f\n",init_conds(3))
+    
+    waypoints = [0 , V_s*end_time ; 0, 0];
+end
 
 %% Initialize Arrays
 
@@ -112,8 +131,8 @@ phidotdot = zeros(size(time));
 
 % Inputs
 
-T_top = (m*g/2)*ones(size(time));
-T_bot = (m*g/2)*ones(size(time));
+T_top = init_conds(1)*ones(size(time));
+T_bot = init_conds(2)*ones(size(time));
 
 % Misc Variables (also important)
 alpha = zeros(size(time));
@@ -135,15 +154,19 @@ Ptop = zeros(size(time));
 Pbot = zeros(size(time));
 
 % Initial conditions:
-phi(1) = pi/2;
+phi(1) = init_conds(3);
 x(1) = 0;
 z(1) = 0;
-xdot(1) = 0;
+if traj_type == "cubic"
+    xdot(1) = 0;
+elseif traj_type == "trim"
+    xdot(1) = V_s;
+end
 zdot(1) = 0;
 
 % Trajectory state
 desired_state = zeros(6,length(time));  % [x, z, xdot, zdot, xdotdot, zdotdot]
-desired_state(1:2,1) = [x(1);z(1)];
+desired_state(:,1) = [x(1);z(1);xdot(1);zdot(1);xdotdot(1);zdotdot(1)];
 
 %% Main Simulation
 
@@ -154,17 +177,24 @@ for i = 2:length(time)
     current_time = time(i);
     
     % Get our desired state at time(i)
-    if time(i) < end_time
-        xz_temp = ppval(traj_obj,time(i));
-        xzdot_temp = ppval(traj_obj_dot,time(i));
-        xzdotdot_temp = ppval(traj_obj_dotdot,time(i));
-    else
-        xz_temp = waypoints(:,end);
-        xzdot_temp = [0;0];
-        xzdotdot_temp = [0;0];
+    
+    if traj_type == "cubic"
+        if time(i) < end_time
+            xz_temp = ppval(traj_obj,time(i));
+            xzdot_temp = ppval(traj_obj_dot,time(i));
+            xzdotdot_temp = ppval(traj_obj_dotdot,time(i));
+        else
+            xz_temp = waypoints(:,end);
+            xzdot_temp = [0;0];
+            xzdotdot_temp = [0;0];
+        end
+    elseif traj_type == "trim"
+        xzdotdot_temp = [0 ; 0];
+        xzdot_temp = [V_s ; 0];
+        xz_temp = [V_s*time(i-1) ; 0];
     end
     
-    desired_state(:,i) = [xz_temp' , xzdot_temp' , xzdotdot_temp'];
+    desired_state(:,i) = [xz_temp' , xzdot_temp' , xzdotdot_temp']; % 6x1
     
     % Find the current airspeed and prop wash speed
     Vi(i-1) = sqrt( xdot(i-1)^2 + zdot(i-1)^2 );
@@ -180,7 +210,7 @@ for i = 2:length(time)
     % Get prop wash over wing via momentum theory
     T_avg = 0.5*(T_top(i-1) + T_bot(i-1));
     
-%     Vw(i-1) = 1.2*sqrt( T_avg/(8*rho*pi*R^2) );
+    %     Vw(i-1) = 1.2*sqrt( T_avg/(8*rho*pi*R^2) );
     Vw(i-1) = eta*sqrt( (Vi(i-1)*cos(phi(i-1)-gamma(i-1)))^2 + (T_avg/(0.5*rho*pi*R^2)) );
     
     % Compute true airspeed over the wings using law of cosines
@@ -194,7 +224,7 @@ for i = 2:length(time)
     end
     
     if aero == true
-%         [Cl, Cd, Cm] = aero_fns(c0, c1, c2, alpha_e(i-1));
+        %         [Cl, Cd, Cm] = aero_fns(c0, c1, c2, alpha_e(i-1));
         Cl = interp1(alpha_data, cl_data, alpha_e(i-1)*180/pi);
         Cd = interp1(alpha_data, cd_data, alpha_e(i-1)*180/pi);
         Cm = interp1(alpha_data, cm_data, alpha_e(i-1)*180/pi);
@@ -210,10 +240,10 @@ for i = 2:length(time)
     D(i-1) = 0.5*rho*Va(i-1)^2*(chord*span)*Cd;
     M_air(i-1) = 0.5*rho*Va(i-1)^2*(chord*span)*chord*Cm;
     
-%     fprintf("\nIndex = %d",i)
-%     if i == 226
-%         xxx = 50;
-%     end
+    %     fprintf("\nIndex = %d",i)
+    %     if i == 226
+    %         xxx = 50;
+    %     end
     [T_top(i), T_bot(i), Fdes(:,i)] = qbit_controller(current_state, ...
         desired_state(:,i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1), m, ...
         Iyy, l);
@@ -230,7 +260,7 @@ for i = 2:length(time)
     x(i) = x(i-1) + xdot(i)*dt;
     z(i) = z(i-1) + zdot(i)*dt;
     phi(i) = phi(i-1) + phidot(i)*dt;
-   
+    
 end
 
 L(end) = L(end-1);
@@ -249,6 +279,7 @@ T_top(end) = T_top(end-1);
 T_bot(end) = T_bot(end-1);
 
 Fdes(:,end) = Fdes(:,end-1);
+Fdes(:,1) = Fdes(:,2);
 
 
 %% Simulation
@@ -384,8 +415,8 @@ ylabel('\alpha_e [rad]')
 xlim([0,time(end)])
 % xlim([0,18])
 maxi = find(alpha_e == max(alpha_e));
-plot(time(maxi),alpha_e(maxi),'ro','linewidth',2)
-text(end_time/2,-1,strcat("max(\alpha_e) = ",num2str(max(alpha_e)),"-rad"))
+% plot(time(maxi),alpha_e(maxi),'ro','linewidth',2)
+% text(end_time/2,-1,strcat("(\alpha_e)_{SS} = ",num2str(mean(alpha_e((end-100):end))),"-rad"))
 grid on
 
 subplot(3,1,3)
@@ -405,9 +436,10 @@ sgtitle("Thrust Commands")
 plot(time, T_top, 'k-', 'linewidth', 1.5)
 hold on
 plot(time, T_bot, 'r-', 'linewidth', 1.5)
+plot(time, 0.5*(T_top + T_bot), 'g-', 'linewidth', 1.5)
 xlabel("Time (s)")
 ylabel("Thrust (N)")
-legend("T_{top}", "T_{bot}")
+legend("T_{top}", "T_{bot}", "T_{avg}")
 grid on
 
 figure()
@@ -425,4 +457,3 @@ ylabel("Force (N)")
 legend("Fx","Fz","norm(Fdes)")
 title("Thrust Vector from Controller")
 grid on
-
