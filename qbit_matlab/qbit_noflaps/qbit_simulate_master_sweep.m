@@ -1,10 +1,10 @@
+function data_out = qbit_simulate_master_sweep(eta, V_s)
 %%% Simulating the dynamics of the qbit. This script will establish state
 %%% variables, get a trajectory, input that trajectory into a controller to
 %%% get commands, and simulate the dynamis subject to those inputs.
 %%% Spencer Folk 2020
 
-clear
-clc
+% clear
 close all
 
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
@@ -16,31 +16,7 @@ traj_type = "trim"; % Type of trajectory, "cubic" or "trim" (for steady state fl
 in2m = 0.0254;
 g = 9.81;
 rho = 1.2;
-eta = 1;   % Efficiency of the down wash on the wings from the propellers
-
-% Ritz tailsitter
-% m = 0.150;
-% Iyy = 2.32e-3;
-% span = 15*in2m;
-% l = 6*in2m;
-% chord = 5*in2m;
-% R = 2.5*in2m;
-
-% UMD QBiT
-% m = 3.76;
-% Iyy = 2.32e-1;  % Estimated with scaling laws based on mass and chord
-% span = 1.02;
-% chord = 0.254;
-% l = 19*in2m;
-% R = 15/2*in2m;
-
-% UMD QBiT Refined (thrust from motors don't even balance the weight...)
-% m = 1.264;
-% Iyy = 2.32e-2;  % Estimated with scaling laws based on mass and chord
-% span = 1.02;
-% chord = 0.254;
-% l = 19*in2m;
-% R = 15/2*in2m;
+% eta = 0.8;   % Efficiency of the down wash on the wings from the propellers
 
 % CRC 5in prop
 % m_airframe = 0.215;
@@ -64,17 +40,6 @@ scaling_factor = span/(15*in2m);
 m = (0.3650)*(scaling_factor^3);  % Mass scales with R^3
 Iyy = (2.32e-3)*(scaling_factor^5);
 
-% Aero coefficients that act on the lift/drag coefficients to match that of
-% "experimental" (in reality, simulation) data from XFOIL
-
-% c0 = 4.80914;  % coeff acts as a scaling factor on Cl, Cm
-% c1 = 0.02;     % coeff acts as a shifting factor on Cd
-% c2 = 0.61929;  % coeff acts as a scaling factor on Cd
-
-% c0 = 1;
-% c1 = 0;
-% c2 = 1;
-
 %% Generate Airfoil Look-up
 % This look up table data will be used to estimate lift, drag, moment given
 % the angle of attack and interpolation from this data.
@@ -83,20 +48,11 @@ Iyy = (2.32e-3)*(scaling_factor^5);
 %% Trajectory Generation
 % Generate a trajectory based on the method selected. If cubic, use cubic
 % splines. If trim, create a constant speed, trim flight.
-V_s = 30;
+% V_s = 1;
 end_time = 10;   % Duration of trajectory, this will be rewritten if cubic spline is selected
 
 if traj_type == "cubic"
     waypoints = [0,40; 0,0];
-    % waypoints = [0,0,10 ; 0,10,10];  % aggressive maneuver
-    % waypoints = [0,20,40 ; 0,0,0];  % Straight line horizontal trajectory
-    % waypoints = [0,80,160 ; 0,0,0];  % Straight line horizontal trajectory, longer
-    % waypoints = [0,0,0 ; 0, 20, 40]; % Straight line vertical trajectory
-    % waypoints = [0,10,40 ; 0,10,10];  % Larger distance shows off lift benefit
-    % waypoints = [0,20,40 ; 0,5,10]; % diagonal
-    % waypoints = [0,10,20,30,40 ; 0,10,0,-10,0]; % zigzag
-    % waypoints = [0,0 ; 0, -10];  % Drop
-    % waypoints = [0,0 ; 0, 10];  % rise
     
     [traj_obj, end_time] = qbit_trajectory_generator(waypoints, V_s);
     
@@ -113,16 +69,10 @@ elseif traj_type == "trim"
     % This involves solving for T_top(0), T_bot(0), phi(0)
     x0 = [m*g/2; m*g/2; pi/4];
     fun = @(x) trim_flight(x, cl_spline, cd_spline, cm_spline, m,g,l, chord, span, rho, eta, R, V_s);
-%     options = optimoptions('fsolve','Display','iter');
-    options = optimoptions('fsolve','Display','none','PlotFcn',@optimplotfirstorderopt);
+    options = optimoptions('fsolve','Display','none');
     [init_conds,~,~,output] = fsolve(fun,x0,options);
     
-%     output.iterations
-    
-    fprintf("\nTrim estimate solved: \n")
-    fprintf("\nT_top = %3.4f",init_conds(1))
-    fprintf("\nT_bot = %3.4f",init_conds(2))
-    fprintf("\nphi   = %3.4f\n",init_conds(3))
+    iter = output.iterations;
     
     waypoints = [0 , V_s*end_time ; 0, 0];
 end
@@ -242,10 +192,6 @@ for i = 2:length(time)
     end
     
     if aero == true
-        %         [Cl, Cd, Cm] = aero_fns(c0, c1, c2, alpha_e(i-1));
-%         Cl = interp1(alpha_data, cl_data, alpha_e(i-1)*180/pi);
-%         Cd = interp1(alpha_data, cd_data, alpha_e(i-1)*180/pi);
-%         Cm = interp1(alpha_data, cm_data, alpha_e(i-1)*180/pi);
         Cl = ppval(cl_spline, alpha_e(i-1)*180/pi);
         Cd = ppval(cd_spline, alpha_e(i-1)*180/pi);
         Cm = ppval(cm_spline, alpha_e(i-1)*180/pi);
@@ -259,11 +205,7 @@ for i = 2:length(time)
     L(i-1) = 0.5*rho*Va(i-1)^2*(chord*span)*Cl;
     D(i-1) = 0.5*rho*Va(i-1)^2*(chord*span)*Cd;
     M_air(i-1) = 0.5*rho*Va(i-1)^2*(chord*span)*chord*Cm;
-    
-    %     fprintf("\nIndex = %d",i)
-    %     if i == 226
-    %         xxx = 50;
-    %     end
+   
     [T_top(i), T_bot(i), Fdes(:,i)] = qbit_controller(current_state, ...
         desired_state(:,i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1), m, ...
         Iyy, l);
@@ -312,181 +254,20 @@ if animate == true
     axis equal
 end
 
-%% Plotting
-figure()
-sgtitle("States")
+a_v = cot(alpha_e(end))/(Cd + Cl*cot(alpha_e(end)));
+data_out = [eta V_s T_top(end) T_bot(end) phi(end) alpha(end) alpha_e(end) Vw(end) ...
+            Va(end) L(end) D(end) M_air(end) Cl Cd Cm iter a_v];
 
-subplot(3,1,1)
-plot(time, x, 'r-','linewidth',1.5)
-hold on
-plot(time, desired_state(1,:), 'k--', 'linewidth',1)
-ylabel('x [m]')
-xlim([0,time(end)])
-grid on
+% fprintf("\nData points of interest: \n")
+% fprintf("T_top = %3.4f\n",T_top(end))
+% fprintf("T_bot = %3.4f\n",T_bot(end))
+% fprintf("phi = %3.4f\n",phi(end))
+% fprintf("alpha = %3.4f\n",mean(alpha))
+% fprintf("alpha_e = %3.4f\n",mean(alpha_e))
+% fprintf("V_w = %3.4f\n",mean(Vw))
+% fprintf("V_a = %3.4f\n",mean(Va))
+% fprintf("L = %3.4f\n",mean(L))
+% fprintf("D = %3.4f\n",mean(D))
+% fprintf("M_air = %3.4f\n",mean(M_air))
 
-subplot(3,1,2)
-plot(time, z, 'k-','linewidth',1.5)
-hold on
-plot(time, desired_state(2,:), 'k--', 'linewidth',1)
-ylabel('z [m]')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,3)
-plot(time, phi, 'b-','linewidth',1.5)
-hold on
-plot(time, ones(size(time))*pi/2, 'k--', 'linewidth', 1)
-ylabel('phi [rad]')
-xlim([0,time(end)])
-xlabel("Time (s)")
-grid on
-
-figure()
-sgtitle("State Derivatives")
-
-subplot(3,1,1)
-plot(time, xdot, 'r-','linewidth',1.5)
-hold on
-plot(time, desired_state(3,:), 'k--', 'linewidth',1)
-ylabel('xdot [m/s]')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,2)
-plot(time, zdot, 'k-','linewidth',1.5)
-hold on
-plot(time, desired_state(4,:), 'k--', 'linewidth',1)
-ylabel('zdot [m/s]')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,3)
-plot(time, phidot, 'b-','linewidth',1.5)
-ylabel('phidot [rad/s]')
-xlim([0,time(end)])
-xlabel("Time (s)")
-grid on
-
-figure()
-sgtitle("Aero Forces/Moments")
-
-subplot(3,1,1)
-plot(time, L, 'r-','linewidth',1.5)
-ylabel('Lift [N]')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,2)
-plot(time, D, 'k-','linewidth',1.5)
-ylabel('Drag [N]')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,3)
-plot(time, M_air, 'b-','linewidth',1.5)
-ylabel('M_{air} [Nm]')
-xlim([0,time(end)])
-xlabel("Time (s)")
-grid on
-
-figure()
-sgtitle("Airflow Over Wing")
-
-subplot(3,1,1)
-plot(time, Va, 'r-','linewidth',1.5)
-ylabel('V_a [m/s]')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,2)
-plot(time, Vi, 'k-','linewidth',1.5)
-ylabel('V_i [m/s]')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,3)
-plot(time, Vw, 'b-','linewidth',1.5)
-ylabel('V_w [m/s]')
-xlim([0,time(end)])
-xlabel("Time (s)")
-grid on
-
-figure()
-titl = strcat("Misc Angles, \eta = ",num2str(eta));
-sgtitle(titl)
-
-subplot(3,1,1)
-plot(time, alpha, 'r-','linewidth',1.5)
-hold on
-plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
-plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
-ylabel('\alpha [rad]')
-xlim([0,time(end)])
-% xlim([0,18])
-grid on
-
-subplot(3,1,2)
-plot(time, alpha_e, 'k-','linewidth',1.5)
-hold on
-plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
-plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
-plot(time, ones(size(time))*10*pi/180, 'g--', 'linewidth', 1)
-ylabel('\alpha_e [rad]')
-xlim([0,time(end)])
-% xlim([0,18])
-maxi = find(alpha_e == max(alpha_e));
-% plot(time(maxi),alpha_e(maxi),'ro','linewidth',2)
-% text(end_time/2,-1,strcat("(\alpha_e)_{SS} = ",num2str(mean(alpha_e((end-100):end))),"-rad"))
-grid on
-
-subplot(3,1,3)
-plot(time, gamma, 'b-','linewidth',1.5)
-hold on
-plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
-plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
-ylabel('\gamma [rad]')
-xlim([0,time(end)])
-% xlim([0,18])
-xlabel("Time (s)")
-grid on
-
-figure()
-sgtitle("Thrust Commands")
-
-plot(time, T_top, 'k-', 'linewidth', 1.5)
-hold on
-plot(time, T_bot, 'r-', 'linewidth', 1.5)
-plot(time, 0.5*(T_top + T_bot), 'g-', 'linewidth', 1.5)
-xlabel("Time (s)")
-ylabel("Thrust (N)")
-legend("T_{top}", "T_{bot}", "T_{avg}")
-grid on
-
-figure()
-title("Desired Thrust Vector")
-plot(time, Fdes(1,:),'-','linewidth',1.5)
-hold on
-plot(time, Fdes(2,:),'-','linewidth',1.5)
-normFdes = zeros(size(time));
-for i = 1:length(time)
-    normFdes(i) = norm(Fdes(:,i));
 end
-plot(time, normFdes, 'k--','linewidth',1.5)
-xlabel("Time (s)")
-ylabel("Force (N)")
-legend("Fx","Fz","norm(Fdes)")
-title("Thrust Vector from Controller")
-grid on
-
-fprintf("\nData points of interest: \n")
-fprintf("T_top = %3.4f\n",T_top(end))
-fprintf("T_bot = %3.4f\n",T_bot(end))
-fprintf("phi = %3.4f\n",phi(end))
-fprintf("alpha = %3.4f\n",mean(alpha))
-fprintf("alpha_e = %3.4f\n",mean(alpha_e))
-fprintf("V_w = %3.4f\n",mean(Vw))
-fprintf("V_a = %3.4f\n",mean(Va))
-fprintf("L = %3.4f\n",mean(L))
-fprintf("D = %3.4f\n",mean(D))
-fprintf("M_air = %3.4f\n",mean(M_air))
-

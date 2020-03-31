@@ -10,14 +10,14 @@ function [Cl, Cd, Cm] = aero_fns(c0, c1, c2, alpha)
 % c1 [1x1] - shifting coeff on Cd
 % c2 [1x1] - scaling coeff on Cd
 
-if abs(alpha) <= 18.5*pi/180
+% if abs(alpha) <= 18.5*pi/180
     Cl = 2*sin(c0*alpha).*cos(c0*alpha);
     Cm = 0.5*sin(c0*alpha).*cos(c0*alpha);
 
-else
-    Cl = 0;
-    Cm = 0;
-end
+% else
+%     Cl = 0;
+%     Cm = 0;
+% end
 Cd = c1 + 2*sin(c2*alpha).^2;
 
 end
