@@ -8,7 +8,7 @@ clc
 close all
 
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
-animate = false; % Bool for making an animation of the vehicle.
+animate = true; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
 traj_type = "increasing"; % Type of trajectory, "cubic", "trim" (for steady state flight), "increasing" (const acceleration)
 
@@ -18,7 +18,8 @@ g = 9.81;
 rho = 1.2;
 stall_angle = 10;  % deg, identified from plot of cl vs alpha
 
-eta = 1;   % Efficiency of the down wash on the wings from the propellers
+
+eta = 0.5;   % Efficiency of the down wash on the wings from the propellers
 
 % Ritz tailsitter
 % m = 0.150;
@@ -133,7 +134,7 @@ elseif traj_type == "increasing"
     
     init_conds = [m*g/2; m*g/2 ; pi/2];
     V_end = 30;
-    a_s = 1;  % m/s^2, acceleration used for transition
+    a_s = 5;  % m/s^2, acceleration used for transition
     
     end_time = V_end/a_s;
 elseif traj_type == "decreasing"
@@ -147,12 +148,11 @@ elseif traj_type == "decreasing"
     [init_conds,~,~,output] = fsolve(fun,x0,options);
     
     V_start = 30;
-    a_s = 1;   % m/s^2, decelleration used for transition
-    end_time = V_start/a_s;
-else
-    error("Incorrect trajectory type -- check traj_type variable")
+    a_s = 5;   % m/s^2, decelleration used for transition
+    else
+        error("Incorrect trajectory type -- check traj_type variable")
 end
-
+    
 
 %% Initialize Arrays
 
@@ -206,8 +206,6 @@ if traj_type == "cubic"
     xdot(1) = 0;
 elseif traj_type == "trim"
     xdot(1) = V_s;
-elseif traj_type == "decreasing"
-    xdot(1) = V_start;
 end
 zdot(1) = 0;
 
@@ -245,8 +243,8 @@ for i = 2:length(time)
         xz_temp = [(1/2)*a_s*(time(i-1)^2) ; 0];
     elseif traj_type == "decreasing"
         xzdotdot_temp = [-a_s ; 0];
-        xzdot_temp = [V_start-a_s*time(i-1) ; 0];
-        xz_temp = [V_start*time(i-1)-(1/2)*a_s*(time(i-1)^2) ; 0];
+        xzdot_temp = [-a_s*time(i-1) ; 0];
+        xz_temp = [(1/2)*a_s*(time(i-1)^2) ; 0];
     end
     
     desired_state(:,i) = [xz_temp' , xzdot_temp' , xzdotdot_temp']; % 6x1
@@ -338,7 +336,6 @@ T_bot(end) = T_bot(end-1);
 Fdes(:,end) = Fdes(:,end-1);
 Fdes(:,1) = Fdes(:,2);
 
-a_v_Va = (1/2)*rho*(chord*span)*Va.^2/(m*g);
 
 %% Animation
 
@@ -352,14 +349,6 @@ if animate == true
     end
     axis equal
 end
-
-%% Trim Comparison
-
-table = readtable("prop_wash_sweep.csv");
-trim_eta = table.eta;
-trim_alpha_e = table.alpha_e(trim_eta == eta);
-trim_Vi = table.V_i(trim_eta == eta);
-trim_a_v_Va = table.a_v_Va(trim_eta == eta);
 
 %% Plotting
 figure()
@@ -540,4 +529,3 @@ if traj_type == "trim"
     fprintf("D = %3.4f\n",mean(D))
     fprintf("M_air = %3.4f\n",mean(M_air))
 end
-

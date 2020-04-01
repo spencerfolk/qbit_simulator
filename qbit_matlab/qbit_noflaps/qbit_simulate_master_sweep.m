@@ -60,7 +60,7 @@ if traj_type == "cubic"
     traj_obj_dot = fnder(traj_obj,1);
     traj_obj_dotdot = fnder(traj_obj,2);
     
-    init_conds = [m*g/2; m*g/2 ; pi/2];
+    init_conds = [m*g/2; m*g/2 ; 0];
 elseif traj_type == "trim"
     % In the trim mode, we have to have a good initial guess for the trim
     % condition, so that the QBiT isn't too far from the steady state value
@@ -254,9 +254,12 @@ if animate == true
     axis equal
 end
 
-a_v = cot(alpha_e(end))/(Cd + Cl*cot(alpha_e(end)));
-data_out = [eta V_s T_top(end) T_bot(end) phi(end) alpha(end) alpha_e(end) Vw(end) ...
-            Va(end) L(end) D(end) M_air(end) Cl Cd Cm iter a_v];
+a_v_analytic = cot(alpha_e(end))/(Cd + Cl*cot(alpha_e(end)));
+a_v_Va = (1/2)*rho*(chord*span)*Va(end)^2/(m*g);
+a_v_Vi = (1/2)*rho*(chord*span)*Vi(end)^2/(m*g);
+T_avg = (1/2)*(T_top(end) + T_bot(end));
+data_out = [eta V_s T_top(end) T_bot(end) T_avg phi(end) alpha(end) alpha_e(end) Vw(end) ...
+            Va(end) L(end) D(end) M_air(end) Cl Cd Cm iter a_v_analytic a_v_Va a_v_Vi std(alpha_e)];
 
 % fprintf("\nData points of interest: \n")
 % fprintf("T_top = %3.4f\n",T_top(end))

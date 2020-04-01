@@ -28,18 +28,23 @@ a_v_trig = cotd(alpha)./(cd_trig + cl_trig.*cotd(alpha));
 
 %% Sweep data
 table = readtable("prop_wash_sweep.csv");
-alpha_exp = table.alpha_e;
+alpha_e_exp = table.alpha_e;
 a_v_exp = table.a_v;
+alpha_exp = table.alpha;
+cl_exp = table.Cl;
+cd_exp = table.Cd;
+
+a_v_wprop_exp = (cosd(alpha_exp)./sind(alpha_e_exp))./(cd_exp + cl_exp.*cotd(alpha_e_exp));
 
 figure()
 plot(a_v, alpha,'r-','linewidth',2)
 hold on
 % plot(a_v_trig, alpha,'b-','linewidth',2)
-scatter(a_v_exp, alpha_exp)
+% scatter(a_v_exp, alpha_e_exp)
 xlabel("a_v [ ]")
 ylabel("\alpha [deg]")
 xlim([0,20])
-legend("Experimental NACA 0015", "Simulation")
+% legend("Experimental NACA 0015", "Simulation")
 grid on
 
 %% Surface analysis for solver

@@ -23,5 +23,5 @@ for i = 1:length(V_s)
     end
 end
 
-table(:,5:7) = table(:,5:7)*180/pi;  % Convert angles to deg
+table(:,6:8) = table(:,6:8)*180/pi;  % Convert angles to deg
 csvwrite("prop_wash_sweep.csv",table);
