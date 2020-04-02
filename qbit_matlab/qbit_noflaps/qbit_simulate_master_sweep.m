@@ -43,7 +43,7 @@ Iyy = (2.32e-3)*(scaling_factor^5);
 %% Generate Airfoil Look-up
 % This look up table data will be used to estimate lift, drag, moment given
 % the angle of attack and interpolation from this data.
-[cl_spline, cd_spline, cm_spline] = aero_lookup("naca_0015_experimental_Re-160000.csv");
+[cl_spline, cd_spline, cm_spline] = aero_fns("naca_0015_experimental_Re-160000.csv");
 
 %% Trajectory Generation
 % Generate a trajectory based on the method selected. If cubic, use cubic

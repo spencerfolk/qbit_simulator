@@ -7,7 +7,7 @@ clc
 close all
 
 %% Analytical soln
-[cl_spline, cd_spline, cm_spline] = aero_lookup("naca_0015_experimental_Re-160000.csv");
+[cl_spline, cd_spline, cm_spline] = aero_fns("naca_0015_experimental_Re-160000.csv");
 
 alpha = 0:0.1:90;
 
@@ -22,7 +22,7 @@ c0 = 4.80914;  % coeff acts as a scaling factor on Cl, Cm
 c1 = 0.02;     % coeff acts as a shifting factor on Cd
 c2 = 0.61929;  % coeff acts as a scaling factor on Cd
 
-[cl_trig, cd_trig, cm_trig] = aero_fns(c0, c1, c2, alpha*pi/180);
+[cl_trig, cd_trig, cm_trig] = aero_fns_trig(c0, c1, c2, alpha*pi/180);
 
 a_v_trig = cotd(alpha)./(cd_trig + cl_trig.*cotd(alpha));
 

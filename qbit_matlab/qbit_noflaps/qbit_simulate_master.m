@@ -18,7 +18,7 @@ g = 9.81;
 rho = 1.2;
 stall_angle = 10;  % deg, identified from plot of cl vs alpha
 
-eta = 1;   % Efficiency of the down wash on the wings from the propellers
+eta = 0.65;   % Efficiency of the down wash on the wings from the propellers
 
 % Ritz tailsitter
 % m = 0.150;
@@ -80,7 +80,7 @@ Iyy = (2.32e-3)*(scaling_factor^5);
 %% Generate Airfoil Look-up
 % This look up table data will be used to estimate lift, drag, moment given
 % the angle of attack and interpolation from this data.
-[cl_spline, cd_spline, cm_spline] = aero_lookup("naca_0015_experimental_Re-160000.csv");
+[cl_spline, cd_spline, cm_spline] = aero_fns("naca_0015_experimental_Re-160000.csv");
 
 %% Trajectory Generation
 % Generate a trajectory based on the method selected. If cubic, use cubic
@@ -133,7 +133,7 @@ elseif traj_type == "increasing"
     
     init_conds = [m*g/2; m*g/2 ; pi/2];
     V_end = 30;
-    a_s = 1;  % m/s^2, acceleration used for transition
+    a_s = 0.1;  % m/s^2, acceleration used for transition
     
     end_time = V_end/a_s;
 elseif traj_type == "decreasing"
@@ -362,6 +362,8 @@ trim_Vi = table.V_i(trim_eta == eta);
 trim_a_v_Va = table.a_v_Va(trim_eta == eta);
 
 %% Plotting
+
+% States
 figure()
 sgtitle("States")
 
@@ -387,7 +389,7 @@ hold on
 plot(time, ones(size(time))*pi/2, 'k--', 'linewidth', 1)
 ylabel('phi [rad]')
 xlim([0,time(end)])
-xlabel("Time (s)")
+xlabel("Time [s]")
 grid on
 
 figure()
@@ -527,6 +529,18 @@ legend("Fx","Fz","norm(Fdes)")
 title("Thrust Vector from Controller")
 grid on
 
+% Comparison with Trim Data
+figure()
+plot(trim_a_v_Va, trim_alpha_e, 'ro', 'linewidth', 1.5)
+hold on
+plot(a_v_Va, alpha_e*180/pi, 'k-', 'linewidth', 2)
+xlabel("a_{v,Va}")
+ylabel("\alpha_e [deg]")
+legend("Trim Condition", "Transition Maneuver")
+grid on
+title(strcat("Comparison with Trim Data, acc = ",num2str(a_s),"-m/s^2"))
+
+%% MISC Printouts
 if traj_type == "trim"
     fprintf("\nData points of interest: \n")
     fprintf("T_top = %3.4f\n",T_top(end))

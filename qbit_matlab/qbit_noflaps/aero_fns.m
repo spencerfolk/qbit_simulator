@@ -1,23 +1,56 @@
-function [Cl, Cd, Cm] = aero_fns(c0, c1, c2, alpha)
-% Computes aerodynamic coefficients given angle of attack alpha
-% INPUT
-% alpha [1x1] - angle of attack [rad]
-% OUTPUT
-% Cl [1x1] - lift coeff
-% Cd [1x1] - Drag coeff
-% Cm [1x1] - Pitch moment coeff
-% c0 [1x1] - scaling coeff on Cl and Cm
-% c1 [1x1] - shifting coeff on Cd
-% c2 [1x1] - scaling coeff on Cd
+function [cl_spline, cd_spline, cm_spline] = aero_fns(filename)
+%%% Creating a look up table for the NACA 0015 airfoil based on wind tunnel
+%%% test data at Re=160,000 for AoA from 0 to 180.
+%%% Spencer Folk 2020
 
-% if abs(alpha) <= 18.5*pi/180
-    Cl = 2*sin(c0*alpha).*cos(c0*alpha);
-    Cm = 0.5*sin(c0*alpha).*cos(c0*alpha);
+% Read in the polars and extract data
+filename = "naca_0015_experimental_Re-160000.csv";
+polars = readmatrix(filename);
 
-% else
-%     Cl = 0;
-%     Cm = 0;
-% end
-Cd = c1 + 2*sin(c2*alpha).^2;
+alpha_data = [-flipud(polars(:,1)) ; polars(2:end,1)];
+cl_data = [-flipud(polars(:,2)) ; polars(2:end,2)];
+cd_data = [flipud(polars(:,3)) ; polars(2:end,3)];
+cm_data = [-flipud(polars(:,4)) ; polars(2:end,4)];
 
+alpha = alpha_data(1):0.01:alpha_data(end);
+cl = interp1(alpha_data, cl_data, alpha);
+cd = interp1(alpha_data, cd_data, alpha);
+cm = interp1(alpha_data, cm_data, alpha);
+
+cl_spline = spline(alpha_data, cl_data);
+cd_spline = spline(alpha_data, cd_data);
+cm_spline = spline(alpha_data, cm_data);
+
+% figure()
+% plot(alpha_data, cl_data,'g*','linewidth',1.5)
+% hold on
+% % plot(alpha, cl, 'r-', 'linewidth',1.5)
+% plot(alpha, ppval(cl_spline,alpha), 'k-', 'linewidth', 2)
+% xlabel("AoA (deg)")
+% ylabel("Lift Coefficient")
+% title("Lift")
+% grid on
+% legend("Data", "Spline Interpolation")
+% 
+% figure()
+% plot(alpha_data, cd_data,'g*','linewidth',1.5)
+% hold on
+% % plot(alpha, cd, 'r-', 'linewidth',1.5)
+% plot(alpha, ppval(cd_spline,alpha), 'k-', 'linewidth', 2)
+% xlabel("AoA (deg)")
+% ylabel("Drag Coefficient")
+% title("Drag")
+% grid on
+% legend("Data", "Spline Interpolation")
+% 
+% figure()
+% plot(alpha_data, cm_data,'g*','linewidth',1.5)
+% hold on
+% % plot(alpha, cm, 'r-', 'linewidth',1.5)
+% plot(alpha, ppval(cm_spline,alpha), 'k-', 'linewidth', 2)
+% xlabel("AoA (deg)")
+% ylabel("Moment Coefficient")
+% title("Pitching Moment")
+% grid on
+% legend("Data", "Spline Interpolation")
 end
