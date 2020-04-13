@@ -27,8 +27,8 @@ cm_spline = spline(alpha_data, cm_data);
 % % plot(alpha, cl, 'r-', 'linewidth',1.5)
 % plot(alpha, ppval(cl_spline,alpha), 'k-', 'linewidth', 2)
 % xlabel("AoA (deg)")
-% ylabel("Lift Coefficient")
-% title("Lift")
+% ylabel("C_L")
+% title("Lift Coefficient")
 % grid on
 % legend("Data", "Spline Interpolation")
 % 
@@ -38,8 +38,8 @@ cm_spline = spline(alpha_data, cm_data);
 % % plot(alpha, cd, 'r-', 'linewidth',1.5)
 % plot(alpha, ppval(cd_spline,alpha), 'k-', 'linewidth', 2)
 % xlabel("AoA (deg)")
-% ylabel("Drag Coefficient")
-% title("Drag")
+% ylabel("C_D")
+% title("Drag Coefficient")
 % grid on
 % legend("Data", "Spline Interpolation")
 % 
@@ -49,8 +49,8 @@ cm_spline = spline(alpha_data, cm_data);
 % % plot(alpha, cm, 'r-', 'linewidth',1.5)
 % plot(alpha, ppval(cm_spline,alpha), 'k-', 'linewidth', 2)
 % xlabel("AoA (deg)")
-% ylabel("Moment Coefficient")
-% title("Pitching Moment")
+% ylabel("C_M")
+% title("Pitching Moment Coefficient")
 % grid on
 % legend("Data", "Spline Interpolation")
 end

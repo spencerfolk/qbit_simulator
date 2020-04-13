@@ -514,7 +514,7 @@ legend("T_{top}", "T_{bot}", "T_{avg}")
 grid on
 
 figure()
-title("Desired Thrust Vector")
+sgtitle("Desired Thrust Vector")
 plot(time, Fdes(1,:),'-','linewidth',1.5)
 hold on
 plot(time, Fdes(2,:),'-','linewidth',1.5)

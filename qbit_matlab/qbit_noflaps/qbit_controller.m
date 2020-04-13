@@ -28,7 +28,7 @@ max_motor_thrust = 0.15*9.81*2; % N, determined by estimating max thrust of a si
 
 % Booleans -- for clarity, true nominally means it will be allowed or enabled.
 aero = true;   % This bool determines whether or not the controller is aware of aerodynamic forces
-neg_thrust_bool = false;  % Boolean for allowing negative thrusts by the motor (unrealistic, but for debugging purposes)
+neg_thrust_bool = true;  % Boolean for allowing negative thrusts by the motor (unrealistic, but for debugging purposes)
 motor_sat_bool = false;  % If motor thrust goes above saturation limit, this will limit it.
 
 
