@@ -133,7 +133,7 @@ elseif traj_type == "increasing"
     
     init_conds = [m*g/2; m*g/2 ; pi/2];
     V_end = 30;
-    a_s = 3;  % m/s^2, acceleration used for transition
+    a_s = 1;  % m/s^2, acceleration used for transition
     
     end_time = V_end/a_s;
 elseif traj_type == "decreasing"
@@ -202,7 +202,9 @@ Pbot = zeros(size(time));
 phi(1) = init_conds(3);
 x(1) = 0;
 z(1) = 0;
-if traj_type == "trim"
+if traj_type == "cubic"
+    xdot(1) = 0;
+elseif traj_type == "trim"
     xdot(1) = V_s;
 elseif traj_type == "decreasing"
     xdot(1) = V_start;
@@ -259,7 +261,7 @@ for i = 2:length(time)
     Vi(i-1) = sqrt( xdot(i-1)^2 + zdot(i-1)^2 );
     
     % Compute orientations
-    if abs(Vi(i-1)) >= 1e-10
+    if abs(Vi(i-1)) >= 1e-5
         gamma(i-1) = atan2(zdot(i-1), xdot(i-1));  % Inertial orientation
     else
         gamma(i-1) = 0;
@@ -276,7 +278,7 @@ for i = 2:length(time)
     Va(i-1) = sqrt( Vi(i-1)^2 + Vw(i-1)^2 + 2*Vi(i-1)*Vw(i-1)*cos( alpha(i-1)) );
     
     % Use this check to avoid errors in asin
-    if Va(i-1) >= 1e-10
+    if Va(i-1) >= 1e-5
         alpha_e(i-1) = asin(Vi(i-1)*sin(alpha(i-1))/Va(i-1));
     else
         alpha_e(i-1) = 0;
@@ -359,22 +361,17 @@ end
 
 %% Trim Comparison
 % Take the data from the trim analysis for the particular flight condition
-% we're interested in (based on eta)
-
+% we're interested in (b
 table = readtable("prop_wash_sweep.csv");
 trim_eta = table.eta;
 trim_alpha_e = table.alpha_e(trim_eta == eta);
-trim_phi = table.phi(trim_eta == eta);
-trim_alpha = table.alpha(trim_eta == eta);
 trim_Vi = table.V_i(trim_eta == eta);
 trim_a_v_Va = table.a_v_Va(trim_eta == eta);
 trim_Cl = table.Cl(trim_eta == eta);
 trim_Cd = table.Cd(trim_eta == eta);
 
 if traj_type == "increasing"
-    % Apply the acceleration shift based on derivation of a_v relationship
-    % with alpha. 
-    trim_a_v_Va_shift = trim_a_v_Va - (a_s/g)./(trim_Cd + trim_Cl.*cot(trim_alpha_e*pi/180));
+    trim_a_v_Va = trim_a_v_Va - (a_s/g)./(trim_Cd + trim_Cl.*cot(trim_alpha_e*pi/180));
 end
 
 %% Plotting
@@ -549,14 +546,11 @@ grid on
 figure()
 plot(trim_a_v_Va, trim_alpha_e, 'ro', 'linewidth', 1.5)
 hold on
-plot(trim_a_v_Va_shift, trim_alpha_e, 'g*', 'linewidth', 1.5)
-plot(a_v_Va(alpha_e ~= 0), alpha_e(alpha_e ~= 0)*180/pi, 'k-', 'linewidth', 2)
+plot(a_v_Va, alpha_e*180/pi, 'k-', 'linewidth', 2)
 xlabel("a_{v,Va}")
 ylabel("\alpha_e [deg]")
-legend("Trim Condition", "Acceleration-Shifted", "Simulation")
+legend("Trim Condition", "Transition Maneuver")
 grid on
-xlim([0,max(trim_a_v_Va)])
-% text(3.1,66,strcat("\eta = ",num2str(eta)))
 title(strcat("Comparison with Trim Data, acc = ",num2str(a_s),"-m/s^2"))
 
 %% MISC Printouts
