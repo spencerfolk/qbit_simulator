@@ -9,31 +9,21 @@ close all
 %% Analytical soln
 [cl_spline, cd_spline, cm_spline] = aero_fns("naca_0015_experimental_Re-160000.csv");
 
-alpha = 0:0.001:90;
+alpha = 0:0.1:90;
 
 cl = ppval(cl_spline, alpha);
 cd = ppval(cd_spline, alpha);
 cm = ppval(cm_spline, alpha);
 
+cl_spline_der = fnder(cl_spline,1);
+cd_spline_der = fnder(cd_spline,1);
+
+cl_der = ppval
+
 a_v = cotd(alpha)./(cd + cl.*cotd(alpha));
 
 % Use Lemma 7.6 from Pucci Thesis to determine equilibrium AoA based on cl
 % and cd from experimental data. 
-
-cl_spline_der = fnder(cl_spline,1);
-cd_spline_der = fnder(cd_spline,1);
-
-cl_der = ppval(cl_spline_der, alpha);
-cd_der = ppval(cd_spline_der, alpha);
-
-% Compute p(alpha), q(alpha)
-p = 3*cd + cl_der;
-q = cd.^2 + cl.^2 + cd.*cl_der - cd_der.*cl;
-
-unstable_conds = find((p.*q < 0) | (p<0 & q<0));
-
-a_v_unstable = a_v(unstable_conds);
-alpha_unstable = alpha(unstable_conds);
 
 
 %% Sweep data
@@ -47,25 +37,12 @@ alpha_unstable = alpha(unstable_conds);
 % a_v_wprop_exp = (cosd(alpha_exp)./sind(alpha_e_exp))./(cd_exp + cl_exp.*cotd(alpha_e_exp));
 
 figure()
-plot(a_v, alpha,'g-','linewidth',2)
-hold on
-plot(a_v_unstable, alpha(unstable_conds), 'r-', 'linewidth',2)
+plot(a_v, alpha,'r-','linewidth',2)
 hold on
 xlabel("a_v [ ]")
 ylabel("\alpha [deg]")
-legend("Stable", "Unstable")
-xlim([0,5])
+xlim([0,20])
 grid on
-
-figure()
-plot(alpha, cl, 'g-','linewidth',2)
-hold on
-plot(alpha_unstable, cl(unstable_conds), 'r-', 'linewidth',2)
-xlabel("\alpha [deg]")
-ylabel("Cl")
-title("Lift Coefficient")
-grid on
-legend("Stable","Unstable")
 
 %% Surface analysis for solver
 % We're interested in what the surface looks like for our dynamics when
