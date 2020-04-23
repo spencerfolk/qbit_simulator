@@ -46,11 +46,15 @@ alpha_unstable = alpha(unstable_conds);
 % 
 % a_v_wprop_exp = (cosd(alpha_exp)./sind(alpha_e_exp))./(cd_exp + cl_exp.*cotd(alpha_e_exp));
 
+xpts = [0, max(a_v) , max(a_v) , 0];
+ypts = [9.67 , 9.67 , 14.5, 14.5];
+unstable_region = polyshape(xpts, ypts);
+
 figure()
 plot(a_v, alpha,'g-','linewidth',2)
 hold on
 plot(a_v_unstable, alpha(unstable_conds), 'r-', 'linewidth',2)
-hold on
+plot(unstable_region,'FaceColor','red')
 xlabel("a_v [ ]")
 ylabel("\alpha [deg]")
 legend("Stable", "Unstable")
