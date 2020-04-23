@@ -10,13 +10,18 @@ close all
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
 animate = false; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
-traj_type = "increasing"; % Type of trajectory, "cubic", "trim" (for steady state flight), "increasing" (const acceleration)
+traj_type = "increasing"; % Type of trajectory:
+%                           "cubic",
+%                           "trim" (for steady state flight),
+%                           "increasing" (const acceleration)
+%                           "const_height" (constant height)
 
 %% Initialize Constants
 in2m = 0.0254;
 g = 9.81;
 rho = 1.2;
 stall_angle = 10;  % deg, identified from plot of cl vs alpha
+dt = 0.01;   % Simulation time step
 
 eta = 0.0;   % Efficiency of the down wash on the wings from the propellers
 
@@ -85,7 +90,7 @@ Iyy = (2.32e-3)*(scaling_factor^5);
 %% Trajectory Generation
 % Generate a trajectory based on the method selected. If cubic, use cubic
 % splines. If trim, create a constant speed, trim flight.
-V_s = 30;
+V_s = 30;  % Target velocity
 end_time = 10;   % Duration of trajectory, this will be rewritten if cubic spline is selected
 
 if traj_type == "cubic"
@@ -107,6 +112,14 @@ if traj_type == "cubic"
     traj_obj_dotdot = fnder(traj_obj,2);
     
     init_conds = [m*g/2; m*g/2 ; pi/2];
+    
+    % Time vector
+    t_f = end_time;
+    time = 0:dt:t_f;
+    
+    fprintf("\nTrajectory type: Cubic Spline")
+    fprintf("\n-----------------------------\n")
+    
 elseif traj_type == "trim"
     % In the trim mode, we have to have a good initial guess for the trim
     % condition, so that the QBiT isn't too far from the steady state value
@@ -121,6 +134,12 @@ elseif traj_type == "trim"
     
     %     output.iterations
     
+    % Time vector
+    t_f = end_time;
+    time = 0:dt:t_f;
+    
+    fprintf("\nTrajectory type: Trim")
+    fprintf("\n---------------------\n")
     fprintf("\nTrim estimate solved: \n")
     fprintf("\nT_top = %3.4f",init_conds(1))
     fprintf("\nT_bot = %3.4f",init_conds(2))
@@ -132,10 +151,18 @@ elseif traj_type == "increasing"
     % Therefore just set the initial condition to 0.
     
     init_conds = [m*g/2; m*g/2 ; pi/2];
-    V_end = 30;
+    V_end = V_s;
     a_s = 3;  % m/s^2, acceleration used for transition
     
     end_time = V_end/a_s;
+    
+    % Time vector
+    t_f = end_time;
+    time = 0:dt:t_f;
+    
+    fprintf("\nTrajectory type: Linear Increasing")
+    fprintf("\n----------------------------------\n")
+    
 elseif traj_type == "decreasing"
     % Constant deceleration from some beginning speed, V_start, to hover.
     
@@ -146,9 +173,46 @@ elseif traj_type == "decreasing"
     options = optimoptions('fsolve','Display','none','PlotFcn',@optimplotfirstorderopt);
     [init_conds,~,~,output] = fsolve(fun,x0,options);
     
-    V_start = 30;
+    V_start = V_s;
     a_s = 1;   % m/s^2, decelleration used for transition
     end_time = V_start/a_s;
+    
+    % Time vector
+    t_f = end_time;
+    time = 0:dt:t_f;
+    
+    fprintf("\nTrajectory type: Linear Decreasing")
+    fprintf("\n----------------------------------\n")
+    
+elseif traj_type == "const_height"
+    % If it's constant height, design a desired AoA function
+    % return a corresponding v(t), a(t), x/z(t) from that.
+    
+    % Need to solve for an estimate of trim flight:
+    x0 = [m*g/2; m*g/2; pi/4];
+    fun = @(x) trim_flight(x, cl_spline, cd_spline, cm_spline, m,g,l, chord, span, rho, eta, R, V_s);
+    %     options = optimoptions('fsolve','Display','iter');
+    options = optimoptions('fsolve','Display','none');
+    [init_conds,~,~,output] = fsolve(fun,x0,options);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Constructing alpha_des:
+    alpha_f = init_conds(end);  % Final value for alpha_des
+    alpha_i = pi/2;  % Initial value for alpha_des
+    aoa_rate = 1*(pi/180);  % Rate of change of AoA, first number in degrees
+    
+    end_time = abs(alpha_f - alpha_i)/aoa_rate;
+    
+    time = 0:dt:end_time;
+    
+    alpha_e_des = alpha_i - aoa_rate*time;
+    
+    % Get temp trajectory variables and save them
+    [x_des, xdot_des, xdotdot_des]=const_height_traj_generator(dt,alpha_e_des,cl_spline, cd_spline,rho,m,g,chord,span);
+    
+    fprintf("\nTrajectory type: Continuous Constant Height")
+    fprintf("\n-------------------------------------------\n")
+    
 else
     error("Incorrect trajectory type -- check traj_type variable")
 end
@@ -156,10 +220,7 @@ end
 
 %% Initialize Arrays
 
-% Time vector
-dt = 0.01;
-t_f = end_time;
-time = 0:dt:t_f;
+%%% TIME IS INTITALIZED IN THE SECTION ABOVE
 
 % States
 x = zeros(size(time));
@@ -199,13 +260,14 @@ Ptop = zeros(size(time));
 Pbot = zeros(size(time));
 
 % Initial conditions:
-phi(1) = init_conds(3);
+phi(1) = pi/2;
 x(1) = 0;
 z(1) = 0;
-if traj_type == "trim"
+if traj_type == "trim" || traj_type == "decreasing"
     xdot(1) = V_s;
-elseif traj_type == "decreasing"
-    xdot(1) = V_start;
+    phi(1) = init_conds(3);
+    xdot(1) = V_s;
+    phi(1) = init_conds(3);
 end
 zdot(1) = 0;
 
@@ -251,6 +313,12 @@ for i = 2:length(time)
         xzdotdot_temp = [-a_s ; 0];
         xzdot_temp = [V_start-a_s*time(i-1) ; 0];
         xz_temp = [V_start*time(i-1)-(1/2)*a_s*(time(i-1)^2) ; 0];
+    elseif traj_type == "const_height"
+        % Take the trajectory and read from there
+        
+        xzdotdot_temp = [xdotdot_des(i); 0];
+        xzdot_temp = [xdot_des(i); 0];
+        xz_temp = [x_des(i); 0];
     end
     
     desired_state(:,i) = [xz_temp' , xzdot_temp' , xzdotdot_temp']; % 6x1
@@ -373,7 +441,7 @@ trim_Cd = table.Cd(trim_eta == eta);
 
 if traj_type == "increasing"
     % Apply the acceleration shift based on derivation of a_v relationship
-    % with alpha. 
+    % with alpha.
     trim_a_v_Va_shift = trim_a_v_Va - (a_s/g)./(trim_Cd + trim_Cl.*cot(trim_alpha_e*pi/180));
 end
 
@@ -495,16 +563,19 @@ grid on
 subplot(3,1,2)
 plot(time, alpha_e, 'k-','linewidth',1.5)
 hold on
-plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
-plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
+if traj_type == "const_height"
+    plot(time, alpha_e_des, 'r--', 'linewidth', 1.5)
+end
+% plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
+% plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
 plot(time, ones(size(time))*stall_angle*pi/180, 'g--', 'linewidth', 1)
 ylabel('\alpha_e [rad]')
 xlim([0,time(end)])
+grid on
 % xlim([0,18])
-maxi = find(alpha_e == max(alpha_e));
+% maxi = find(alpha_e == max(alpha_e));
 % plot(time(maxi),alpha_e(maxi),'ro','linewidth',2)
 % text(end_time/2,-1,strcat("(\alpha_e)_{SS} = ",num2str(mean(alpha_e((end-100):end))),"-rad"))
-grid on
 
 subplot(3,1,3)
 plot(time, gamma, 'b-','linewidth',1.5)
@@ -546,10 +617,14 @@ legend("Fx","Fz","norm(Fdes)")
 grid on
 
 % Comparison with Trim Data
+
 figure()
 plot(trim_a_v_Va, trim_alpha_e, 'ro', 'linewidth', 1.5)
 hold on
-plot(trim_a_v_Va_shift, trim_alpha_e, 'g*', 'linewidth', 1.5)
+if traj_type == "increasing"
+    plot(trim_a_v_Va_shift, trim_alpha_e, 'g*', 'linewidth', 1.5)
+    title(strcat("Comparison with Trim Data, acc = ",num2str(a_s),"-m/s^2"))
+end
 plot(a_v_Va(alpha_e ~= 0), alpha_e(alpha_e ~= 0)*180/pi, 'k-', 'linewidth', 2)
 xlabel("a_{v,Va}")
 ylabel("\alpha_e [deg]")
@@ -557,7 +632,6 @@ legend("Trim Condition", "Acceleration-Shifted", "Simulation")
 grid on
 xlim([0,max(trim_a_v_Va)])
 % text(3.1,66,strcat("\eta = ",num2str(eta)))
-title(strcat("Comparison with Trim Data, acc = ",num2str(a_s),"-m/s^2"))
 
 %% MISC Printouts
 if traj_type == "trim"
