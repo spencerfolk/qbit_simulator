@@ -8,9 +8,9 @@ clc
 close all
 
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
-animate = false; % Bool for making an animation of the vehicle.
+animate = true; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
-traj_type = "increasing"; % Type of trajectory:
+traj_type = "const_height"; % Type of trajectory:
 %                           "cubic",
 %                           "trim" (for steady state flight),
 %                           "increasing" (const acceleration)
@@ -199,7 +199,7 @@ elseif traj_type == "const_height"
     % Constructing alpha_des:
     alpha_f = init_conds(end);  % Final value for alpha_des
     alpha_i = pi/2;  % Initial value for alpha_des
-    aoa_rate = 1*(pi/180);  % Rate of change of AoA, first number in degrees
+    aoa_rate = 3*(pi/180);  % Rate of change of AoA, first number in degrees
     
     end_time = abs(alpha_f - alpha_i)/aoa_rate;
     
@@ -439,9 +439,12 @@ trim_a_v_Va = table.a_v_Va(trim_eta == eta);
 trim_Cl = table.Cl(trim_eta == eta);
 trim_Cd = table.Cd(trim_eta == eta);
 
-if traj_type == "increasing"
+if traj_type == "increasing" || traj_type == "decreasing"
     % Apply the acceleration shift based on derivation of a_v relationship
     % with alpha.
+    if traj_type == "decreasing"
+        a_s = -a_s;
+    end
     trim_a_v_Va_shift = trim_a_v_Va - (a_s/g)./(trim_Cd + trim_Cl.*cot(trim_alpha_e*pi/180));
 end
 
@@ -501,6 +504,29 @@ ylabel('phidot [rad/s]')
 xlim([0,time(end)])
 xlabel("Time (s)")
 grid on
+
+figure()
+sgtitle("Body Acceleration")
+
+subplot(2,1,1)
+plot(time,xdotdot,'r-','linewidth',1.5)
+hold on
+plot(time,desired_state(5,:),'k--','linewidth',1.5)
+ylabel("xdotdot [m/s^2]")
+xlim([0,time(end)]);
+legend("Actual", "Desired")
+grid on
+
+subplot(2,1,2)
+plot(time,zdotdot,'k-','linewidth',1.5)
+hold on
+plot(time,desired_state(6,:),'k--','linewidth',1.5)
+ylabel("zdotdot [m/s^2]")
+xlim([0,time(end)]);
+legend("Actual", "Desired")
+grid on
+
+
 
 figure()
 sgtitle("Aero Forces/Moments")
@@ -621,7 +647,7 @@ grid on
 figure()
 plot(trim_a_v_Va, trim_alpha_e, 'ro', 'linewidth', 1.5)
 hold on
-if traj_type == "increasing"
+if traj_type == "increasing" || traj_type == "decreasing"
     plot(trim_a_v_Va_shift, trim_alpha_e, 'g*', 'linewidth', 1.5)
     title(strcat("Comparison with Trim Data, acc = ",num2str(a_s),"-m/s^2"))
 end
