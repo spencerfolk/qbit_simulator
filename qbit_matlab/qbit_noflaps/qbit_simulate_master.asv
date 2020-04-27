@@ -471,7 +471,7 @@ end
 
 % States
 figure()
-sgtitle("States",'interpreter','latex')
+sgtitle("States")
 
 subplot(3,1,1)
 plot(time, x, 'r-','linewidth',1.5)
@@ -499,7 +499,7 @@ xlabel("Time [s]",'interpreter','latex')
 grid on
 
 figure()
-sgtitle("State Derivatives",'interpreter','latex')
+sgtitle("State Derivatives")
 
 subplot(3,1,1)
 plot(time, xdot, 'r-','linewidth',1.5)
@@ -525,7 +525,7 @@ xlabel("Time [s]",'interpreter','latex')
 grid on
 
 figure()
-sgtitle("Body Acceleration",'interpreter','latex')
+sgtitle("Body Acceleration")
 
 subplot(2,1,1)
 plot(time,xdotdot,'r-','linewidth',1.5)
@@ -547,7 +547,7 @@ xlabel("Time [s]",'interpreter','latex')
 grid on
 
 figure()
-sgtitle("Aero Forces/Moments",'interpreter','latex')
+sgtitle("Aero Forces/Moments")
 
 subplot(3,1,1)
 plot(time, L, 'r-','linewidth',1.5)
@@ -569,7 +569,7 @@ xlabel("Time [s]",'interpreter','latex')
 grid on
 
 figure()
-sgtitle("Airflow Over Wing",'interpreter','latex')
+sgtitle("Airflow Over Wing")
 
 subplot(3,1,1)
 plot(time, Va, 'r-','linewidth',1.5)
@@ -591,8 +591,8 @@ xlabel("Time (s)")
 grid on
 
 figure()
-titl = strcat("Misc Angles, $\eta$ = ",num2str(eta));
-sgtitle(titl,'interpreter','latex')
+titl = strcat("Misc Angles, \eta = ",num2str(eta));
+sgtitle(titl)
 
 subplot(3,1,1)
 plot(time, alpha, 'r-','linewidth',1.5)
