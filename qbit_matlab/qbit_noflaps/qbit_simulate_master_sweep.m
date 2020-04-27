@@ -66,7 +66,7 @@ elseif traj_type == "trim"
     % condition, so that the QBiT isn't too far from the steady state value
     % at the beginning of the trajectory!
     
-    % This involves solving for T_top(0), T_bot(0), phi(0)
+    % This involves solving for T_top(0), T_bot(0), theta(0)
     x0 = [m*g/2; m*g/2; pi/4];
     fun = @(x) trim_flight(x, cl_spline, cd_spline, cm_spline, m,g,l, chord, span, rho, eta, R, V_s);
     options = optimoptions('fsolve','Display','none');
@@ -87,15 +87,15 @@ time = 0:dt:t_f;
 % States
 x = zeros(size(time));
 z = zeros(size(time));
-phi = zeros(size(time));
+theta = zeros(size(time));
 
 xdot = zeros(size(time));
 zdot = zeros(size(time));
-phidot = zeros(size(time));
+thetadot = zeros(size(time));
 
 xdotdot = zeros(size(time));
 zdotdot = zeros(size(time));
-phidotdot = zeros(size(time));
+thetadotdot = zeros(size(time));
 
 % Inputs
 
@@ -122,7 +122,7 @@ Ptop = zeros(size(time));
 Pbot = zeros(size(time));
 
 % Initial conditions:
-phi(1) = init_conds(3);
+theta(1) = init_conds(3);
 x(1) = 0;
 z(1) = 0;
 if traj_type == "cubic"
@@ -141,7 +141,7 @@ desired_state(:,1) = [x(1);z(1);xdot(1);zdot(1);xdotdot(1);zdotdot(1)];
 for i = 2:length(time)
     
     % Retrieve the command thrust from desired trajectory
-    current_state = [x(i-1), z(i-1), phi(i-1), xdot(i-1), zdot(i-1), phidot(i-1)];
+    current_state = [x(i-1), z(i-1), theta(i-1), xdot(i-1), zdot(i-1), thetadot(i-1)];
     current_time = time(i);
     
     % Get our desired state at time(i)
@@ -173,13 +173,13 @@ for i = 2:length(time)
     else
         gamma(i-1) = 0;
     end
-    alpha(i-1) = phi(i-1) - gamma(i-1);  % Angle of attack strictly based on inertial speed
+    alpha(i-1) = theta(i-1) - gamma(i-1);  % Angle of attack strictly based on inertial speed
     
     % Get prop wash over wing via momentum theory
     T_avg = 0.5*(T_top(i-1) + T_bot(i-1));
     
     %     Vw(i-1) = 1.2*sqrt( T_avg/(8*rho*pi*R^2) );
-    Vw(i-1) = eta*sqrt( (Vi(i-1)*cos(phi(i-1)-gamma(i-1)))^2 + (T_avg/(0.5*rho*pi*R^2)) );
+    Vw(i-1) = eta*sqrt( (Vi(i-1)*cos(theta(i-1)-gamma(i-1)))^2 + (T_avg/(0.5*rho*pi*R^2)) );
     
     % Compute true airspeed over the wings using law of cosines
     Va(i-1) = sqrt( Vi(i-1)^2 + Vw(i-1)^2 + 2*Vi(i-1)*Vw(i-1)*cos( alpha(i-1)) );
@@ -210,18 +210,18 @@ for i = 2:length(time)
         desired_state(:,i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1), m, ...
         Iyy, l);
     
-    xdotdot(i) = ((T_top(i) + T_bot(i))*cos(phi(i-1)) - D(i-1)*cos(phi(i-1) - alpha_e(i-1)) - L(i-1)*sin(phi(i-1) - alpha_e(i-1)))/m;
-    zdotdot(i) = ( -m*g + (T_top(i) + T_bot(i))*sin(phi(i-1)) - D(i-1)*sin(phi(i-1) - alpha_e(i-1)) + L(i-1)*cos(phi(i-1) - alpha_e(i-1)))/m;
-    phidotdot(i) = (M_air(i-1) + l*(T_bot(i) - T_top(i)))/Iyy;
+    xdotdot(i) = ((T_top(i) + T_bot(i))*cos(theta(i-1)) - D(i-1)*cos(theta(i-1) - alpha_e(i-1)) - L(i-1)*sin(theta(i-1) - alpha_e(i-1)))/m;
+    zdotdot(i) = ( -m*g + (T_top(i) + T_bot(i))*sin(theta(i-1)) - D(i-1)*sin(theta(i-1) - alpha_e(i-1)) + L(i-1)*cos(theta(i-1) - alpha_e(i-1)))/m;
+    thetadotdot(i) = (M_air(i-1) + l*(T_bot(i) - T_top(i)))/Iyy;
     
     % Euler integration
     xdot(i) = xdot(i-1) + xdotdot(i)*dt;
     zdot(i) = zdot(i-1) + zdotdot(i)*dt;
-    phidot(i) = phidot(i-1) + phidotdot(i)*dt;
+    thetadot(i) = thetadot(i-1) + thetadotdot(i)*dt;
     
     x(i) = x(i-1) + xdot(i)*dt;
     z(i) = z(i-1) + zdot(i)*dt;
-    phi(i) = phi(i-1) + phidot(i)*dt;
+    theta(i) = theta(i-1) + thetadot(i)*dt;
     
 end
 
@@ -248,7 +248,7 @@ Fdes(:,1) = Fdes(:,2);
 
 if animate == true
     h = figure();
-    qbit_animate_trajectory(h, time,[x ; z ; phi], desired_state(1,:), desired_state(2,:),Fdes,l, save_animation)
+    qbit_animate_trajectory(h, time,[x ; z ; theta], desired_state(1,:), desired_state(2,:),Fdes,l, save_animation)
     hold on
     plot(waypoints(1,:),waypoints(2,:),'ko','linewidth',2)
     axis equal
@@ -258,13 +258,13 @@ a_v_analytic = cot(alpha_e(end))/(Cd + Cl*cot(alpha_e(end)));
 a_v_Va = (1/2)*rho*(chord*span)*Va(end)^2/(m*g);
 a_v_Vi = (1/2)*rho*(chord*span)*Vi(end)^2/(m*g);
 T_avg = (1/2)*(T_top(end) + T_bot(end));
-data_out = [eta V_s T_top(end) T_bot(end) T_avg phi(end) alpha(end) alpha_e(end) Vw(end) ...
+data_out = [eta V_s T_top(end) T_bot(end) T_avg theta(end) alpha(end) alpha_e(end) Vw(end) ...
             Va(end) L(end) D(end) M_air(end) Cl Cd Cm iter a_v_analytic a_v_Va a_v_Vi std(alpha_e)];
 
 % fprintf("\nData points of interest: \n")
 % fprintf("T_top = %3.4f\n",T_top(end))
 % fprintf("T_bot = %3.4f\n",T_bot(end))
-% fprintf("phi = %3.4f\n",phi(end))
+% fprintf("theta = %3.4f\n",theta(end))
 % fprintf("alpha = %3.4f\n",mean(alpha))
 % fprintf("alpha_e = %3.4f\n",mean(alpha_e))
 % fprintf("V_w = %3.4f\n",mean(Vw))

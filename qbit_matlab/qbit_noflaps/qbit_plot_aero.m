@@ -56,7 +56,7 @@ plot(alpha, ppval(cl_spline,alpha), 'k-', 'linewidth', 2)
 xlabel("AoA (deg)")
 ylabel("Lift Coefficient")
 title("Lift")
-xlim([0,90])
+% xlim([0,90])
 grid on
 legend("Data", "Spline Interpolation")
 
@@ -68,7 +68,7 @@ plot(alpha, ppval(cd_spline,alpha), 'k-', 'linewidth', 2)
 xlabel("AoA (deg)")
 ylabel("Drag Coefficient")
 title("Drag")
-xlim([0,90])
+% xlim([0,90])
 grid on
 legend("Data", "Spline Interpolation")
 
@@ -80,7 +80,7 @@ plot(alpha, ppval(cm_spline,alpha), 'k-', 'linewidth', 2)
 xlabel("AoA (deg)")
 ylabel("Moment Coefficient")
 title("Pitching Moment")
-xlim([0,90])
+% xlim([0,90])
 grid on
 legend("Data", "Spline Interpolation")
 

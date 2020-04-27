@@ -35,12 +35,12 @@ time = 0:dt:tf;
 
 x = zeros(size(time));
 z = zeros(size(time));
-phi = zeros(size(time));
+theta = zeros(size(time));
 
 xdot = zeros(size(time));
 zdot = zeros(size(time));
-phidot = zeros(size(time));
-phidotdot = zeros(size(time));
+thetadot = zeros(size(time));
+thetadotdot = zeros(size(time));
 
 Vi = zeros(size(time));
 gamma = zeros(size(time));
@@ -54,8 +54,8 @@ qdot = zeros(6,length(time));
 % Initial conditions:
 Vi(1) = 0;
 gamma(1) = pi/4;
-phi(1) = pi/4;
-phidot(1) = 0;
+theta(1) = pi/4;
+thetadot(1) = 0;
 x(1) = 0;
 z(1) = 0;
 
@@ -63,15 +63,15 @@ z(1) = 0;
 
 for i = 2:length(time)
     % Iterate through time
-    q0 = [Vi(i-1) gamma(i-1) phi(i-1) phidot(i-1) x(i-1) z(i-1)]';
+    q0 = [Vi(i-1) gamma(i-1) theta(i-1) thetadot(i-1) x(i-1) z(i-1)]';
     u = [T_top(i) T_bot(i)]';
     
     qdot(:,i) = qbit_longitudinal_dynamics(q0,u,m,g,Iyy,l,eta,rho,R,chord,span,cl_spline,cd_spline,cm_spline);
     
     Vidot = qdot(1,i);
     gammadot = qdot(2,i);
-    phidot(i) = qdot(3,i);
-    phidotdot(i) = qdot(4,i);
+    thetadot(i) = qdot(3,i);
+    thetadotdot(i) = qdot(4,i);
     xdot(i) = qdot(5,i);
     zdot(i) = qdot(6,i);
     
@@ -79,12 +79,12 @@ for i = 2:length(time)
     
     Vi(i) = q(1);
     gamma(i) = q(2);
-    phi(i) = q(3);
-    phidot(i) = q(4);
+    theta(i) = q(3);
+    thetadot(i) = q(4);
     x(i) = q(5);
     z(i) = q(6);
     
 end
 
 h = figure();
-qbit_animate_trajectory(h, time,[x ; z ; phi], [min(x),max(x)], [min(z),max(z)],zeros(2,length(time)) , l , false)
+qbit_animate_trajectory(h, time,[x ; z ; theta], [min(x),max(x)], [min(z),max(z)],zeros(2,length(time)) , l , false)

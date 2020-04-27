@@ -8,13 +8,15 @@ clc
 close all
 
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
-animate = true; % Bool for making an animation of the vehicle.
+animate = false; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
 traj_type = "const_height"; % Type of trajectory:
 %                           "cubic",
 %                           "trim" (for steady state flight),
 %                           "increasing" (const acceleration)
 %                           "const_height" (constant height)
+%                           "stepV" (step response in speed)
+%                           "stepA" (step response in angle)
 
 %% Initialize Constants
 in2m = 0.0254;
@@ -23,7 +25,7 @@ rho = 1.2;
 stall_angle = 10;  % deg, identified from plot of cl vs alpha
 dt = 0.01;   % Simulation time step
 
-eta = 0.0;   % Efficiency of the down wash on the wings from the propellers
+eta = 0;   % Efficiency of the down wash on the wings from the propellers
 
 % Ritz tailsitter
 % m = 0.150;
@@ -90,7 +92,7 @@ Iyy = (2.32e-3)*(scaling_factor^5);
 %% Trajectory Generation
 % Generate a trajectory based on the method selected. If cubic, use cubic
 % splines. If trim, create a constant speed, trim flight.
-V_s = 30;  % Target velocity
+V_s = 20;  % Target velocity
 end_time = 10;   % Duration of trajectory, this will be rewritten if cubic spline is selected
 
 if traj_type == "cubic"
@@ -125,7 +127,7 @@ elseif traj_type == "trim"
     % condition, so that the QBiT isn't too far from the steady state value
     % at the beginning of the trajectory!
     
-    % This involves solving for T_top(0), T_bot(0), phi(0)
+    % This involves solving for T_top(0), T_bot(0), theta(0)
     x0 = [m*g/2; m*g/2; pi/4];
     fun = @(x) trim_flight(x, cl_spline, cd_spline, cm_spline, m,g,l, chord, span, rho, eta, R, V_s);
     %     options = optimoptions('fsolve','Display','iter');
@@ -143,7 +145,7 @@ elseif traj_type == "trim"
     fprintf("\nTrim estimate solved: \n")
     fprintf("\nT_top = %3.4f",init_conds(1))
     fprintf("\nT_bot = %3.4f",init_conds(2))
-    fprintf("\nphi   = %3.4f\n",init_conds(3))
+    fprintf("\ntheta   = %3.4f\n",init_conds(3))
     
     waypoints = [0 , V_s*end_time ; 0, 0];
 elseif traj_type == "increasing"
@@ -199,16 +201,24 @@ elseif traj_type == "const_height"
     % Constructing alpha_des:
     alpha_f = init_conds(end);  % Final value for alpha_des
     alpha_i = pi/2;  % Initial value for alpha_des
-    aoa_rate = 3*(pi/180);  % Rate of change of AoA, first number in degrees
     
-    end_time = abs(alpha_f - alpha_i)/aoa_rate;
-    
-    time = 0:dt:end_time;
-    
-    alpha_e_des = alpha_i - aoa_rate*time;
+    alpha_traj_type = "linear";
+    aoa_rate = 1*(pi/180);  % Rate of change of AoA, first number in degrees
+    if alpha_traj_type == "linear"
+        end_time = abs(alpha_f - alpha_i)/aoa_rate;
+        time = 0:dt:end_time;
+        
+        alpha_des = alpha_i - aoa_rate*time;
+    elseif alpha_traj_type == "parabolic"
+        end_time = 30;  % s
+        time = 0:dt:end_time;
+        
+        alpha_des = alpha_i + ((alpha_f-alpha_i)/end_time^2)*time.^2;
+        
+    end
     
     % Get temp trajectory variables and save them
-    [x_des, xdot_des, xdotdot_des]=const_height_traj_generator(dt,alpha_e_des,cl_spline, cd_spline,rho,m,g,chord,span);
+    [x_des, xdot_des, xdotdot_des]=const_height_traj_generator(dt,time,alpha_des,cl_spline, cd_spline,rho,m,g,chord,span);
     
     fprintf("\nTrajectory type: Continuous Constant Height")
     fprintf("\n-------------------------------------------\n")
@@ -225,15 +235,15 @@ end
 % States
 x = zeros(size(time));
 z = zeros(size(time));
-phi = zeros(size(time));
+theta = zeros(size(time));
 
 xdot = zeros(size(time));
 zdot = zeros(size(time));
-phidot = zeros(size(time));
+thetadot = zeros(size(time));
 
 xdotdot = zeros(size(time));
 zdotdot = zeros(size(time));
-phidotdot = zeros(size(time));
+thetadotdot = zeros(size(time));
 
 % Inputs
 
@@ -260,14 +270,14 @@ Ptop = zeros(size(time));
 Pbot = zeros(size(time));
 
 % Initial conditions:
-phi(1) = pi/2;
+theta(1) = pi/2;
 x(1) = 0;
 z(1) = 0;
 if traj_type == "trim" || traj_type == "decreasing"
     xdot(1) = V_s;
-    phi(1) = init_conds(3);
+    theta(1) = init_conds(3);
     xdot(1) = V_s;
-    phi(1) = init_conds(3);
+    theta(1) = init_conds(3);
 end
 zdot(1) = 0;
 
@@ -280,7 +290,7 @@ desired_state(:,1) = [x(1);z(1);xdot(1);zdot(1);xdotdot(1);zdotdot(1)];
 for i = 2:length(time)
     
     % Retrieve the command thrust from desired trajectory
-    current_state = [x(i-1), z(i-1), phi(i-1), xdot(i-1), zdot(i-1), phidot(i-1)];
+    current_state = [x(i-1), z(i-1), theta(i-1), xdot(i-1), zdot(i-1), thetadot(i-1)];
     current_time = time(i);
     
     % Get our desired state at time(i)
@@ -332,13 +342,13 @@ for i = 2:length(time)
     else
         gamma(i-1) = 0;
     end
-    alpha(i-1) = phi(i-1) - gamma(i-1);  % Angle of attack strictly based on inertial speed
+    alpha(i-1) = theta(i-1) - gamma(i-1);  % Angle of attack strictly based on inertial speed
     
     % Get prop wash over wing via momentum theory
     T_avg = 0.5*(T_top(i-1) + T_bot(i-1));
     
     %     Vw(i-1) = 1.2*sqrt( T_avg/(8*rho*pi*R^2) );
-    Vw(i-1) = eta*sqrt( (Vi(i-1)*cos(phi(i-1)-gamma(i-1)))^2 + (T_avg/(0.5*rho*pi*R^2)) );
+    Vw(i-1) = eta*sqrt( (Vi(i-1)*cos(theta(i-1)-gamma(i-1)))^2 + (T_avg/(0.5*rho*pi*R^2)) );
     
     % Compute true airspeed over the wings using law of cosines
     Va(i-1) = sqrt( Vi(i-1)^2 + Vw(i-1)^2 + 2*Vi(i-1)*Vw(i-1)*cos( alpha(i-1)) );
@@ -377,21 +387,22 @@ for i = 2:length(time)
         desired_state(:,i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1), m, ...
         Iyy, l);
     
-    xdotdot(i) = ((T_top(i) + T_bot(i))*cos(phi(i-1)) - D(i-1)*cos(phi(i-1) - alpha_e(i-1)) - L(i-1)*sin(phi(i-1) - alpha_e(i-1)))/m;
-    zdotdot(i) = ( -m*g + (T_top(i) + T_bot(i))*sin(phi(i-1)) - D(i-1)*sin(phi(i-1) - alpha_e(i-1)) + L(i-1)*cos(phi(i-1) - alpha_e(i-1)))/m;
-    phidotdot(i) = (M_air(i-1) + l*(T_bot(i) - T_top(i)))/Iyy;
+    xdotdot(i) = ((T_top(i) + T_bot(i))*cos(theta(i-1)) - D(i-1)*cos(theta(i-1) - alpha_e(i-1)) - L(i-1)*sin(theta(i-1) - alpha_e(i-1)))/m;
+    zdotdot(i) = ( -m*g + (T_top(i) + T_bot(i))*sin(theta(i-1)) - D(i-1)*sin(theta(i-1) - alpha_e(i-1)) + L(i-1)*cos(theta(i-1) - alpha_e(i-1)))/m;
+    thetadotdot(i) = (M_air(i-1) + l*(T_bot(i) - T_top(i)))/Iyy;
     
     % Euler integration
     xdot(i) = xdot(i-1) + xdotdot(i)*dt;
     zdot(i) = zdot(i-1) + zdotdot(i)*dt;
-    phidot(i) = phidot(i-1) + phidotdot(i)*dt;
+    thetadot(i) = thetadot(i-1) + thetadotdot(i)*dt;
     
     x(i) = x(i-1) + xdot(i)*dt;
     z(i) = z(i-1) + zdot(i)*dt;
-    phi(i) = phi(i-1) + phidot(i)*dt;
+    theta(i) = theta(i-1) + thetadot(i)*dt;
     
 end
 
+% Padding
 L(end) = L(end-1);
 D(end) = D(end-1);
 M_air(end) = M_air(end-1);
@@ -410,13 +421,21 @@ T_bot(end) = T_bot(end-1);
 Fdes(:,end) = Fdes(:,end-1);
 Fdes(:,1) = Fdes(:,2);
 
+alpha_e_startidx = find(alpha_e ~= 0,1,'first');
+alpha_e(1:(alpha_e_startidx-1)) = alpha_e(alpha_e_startidx);
+
+Va(1) = Va(2);
+Vw(1) = Vw(2);
+T_top(1) = T_top(2);
+T_bot(1) = T_bot(2);
+
 a_v_Va = (1/2)*rho*(chord*span)*Va.^2/(m*g);
 
 %% Animation
 
 if animate == true
     h = figure();
-    qbit_animate_trajectory(h, time,[x ; z ; phi], desired_state(1,:), desired_state(2,:),Fdes,l, save_animation)
+    qbit_animate_trajectory(h, time,[x ; z ; theta], desired_state(1,:), desired_state(2,:),Fdes,l, save_animation)
     
     if traj_type == "cubic"
         hold on
@@ -432,7 +451,7 @@ end
 table = readtable("prop_wash_sweep.csv");
 trim_eta = table.eta;
 trim_alpha_e = table.alpha_e(trim_eta == eta);
-trim_phi = table.phi(trim_eta == eta);
+trim_theta = table.theta(trim_eta == eta);
 trim_alpha = table.alpha(trim_eta == eta);
 trim_Vi = table.V_i(trim_eta == eta);
 trim_a_v_Va = table.a_v_Va(trim_eta == eta);
@@ -471,10 +490,10 @@ xlim([0,time(end)])
 grid on
 
 subplot(3,1,3)
-plot(time, phi, 'b-','linewidth',1.5)
+plot(time, theta, 'b-','linewidth',1.5)
 hold on
 plot(time, ones(size(time))*pi/2, 'k--', 'linewidth', 1)
-ylabel('phi [rad]')
+ylabel('theta [rad]')
 xlim([0,time(end)])
 xlabel("Time [s]")
 grid on
@@ -499,8 +518,8 @@ xlim([0,time(end)])
 grid on
 
 subplot(3,1,3)
-plot(time, phidot, 'b-','linewidth',1.5)
-ylabel('phidot [rad/s]')
+plot(time, thetadot, 'b-','linewidth',1.5)
+ylabel('thetadot [rad/s]')
 xlim([0,time(end)])
 xlabel("Time (s)")
 grid on
@@ -525,8 +544,6 @@ ylabel("zdotdot [m/s^2]")
 xlim([0,time(end)]);
 legend("Actual", "Desired")
 grid on
-
-
 
 figure()
 sgtitle("Aero Forces/Moments")
@@ -590,11 +607,12 @@ subplot(3,1,2)
 plot(time, alpha_e, 'k-','linewidth',1.5)
 hold on
 if traj_type == "const_height"
-    plot(time, alpha_e_des, 'r--', 'linewidth', 1.5)
+    plot(time, asin(Vi.*sin(alpha_des)./Va), 'k--', 'linewidth', 1.5)
+    plot(time, ones(size(time))*stall_angle*pi/180, 'g--', 'linewidth', 1)
+    legend("Actual","Desired","Stall")
 end
 % plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
 % plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
-plot(time, ones(size(time))*stall_angle*pi/180, 'g--', 'linewidth', 1)
 ylabel('\alpha_e [rad]')
 xlim([0,time(end)])
 grid on
@@ -647,14 +665,14 @@ grid on
 figure()
 plot(trim_a_v_Va, trim_alpha_e, 'ro', 'linewidth', 1.5)
 hold on
+plot(a_v_Va(alpha_e ~= 0), alpha_e(alpha_e ~= 0)*180/pi, 'k-', 'linewidth', 2)
 if traj_type == "increasing" || traj_type == "decreasing"
     plot(trim_a_v_Va_shift, trim_alpha_e, 'g*', 'linewidth', 1.5)
     title(strcat("Comparison with Trim Data, acc = ",num2str(a_s),"-m/s^2"))
+    legend("Trim Condition", "Simulation", "Acceleration-Shifted")
 end
-plot(a_v_Va(alpha_e ~= 0), alpha_e(alpha_e ~= 0)*180/pi, 'k-', 'linewidth', 2)
 xlabel("a_{v,Va}")
 ylabel("\alpha_e [deg]")
-legend("Trim Condition", "Acceleration-Shifted", "Simulation")
 grid on
 xlim([0,max(trim_a_v_Va)])
 % text(3.1,66,strcat("\eta = ",num2str(eta)))
@@ -664,7 +682,7 @@ if traj_type == "trim"
     fprintf("\nData points of interest: \n")
     fprintf("T_top = %3.4f\n",T_top(end))
     fprintf("T_bot = %3.4f\n",T_bot(end))
-    fprintf("phi = %3.4f\n",phi(end))
+    fprintf("theta = %3.4f\n",theta(end))
     fprintf("alpha = %3.4f\n",mean(alpha))
     fprintf("alpha_e = %3.4f\n",mean(alpha_e))
     fprintf("V_w = %3.4f\n",mean(Vw))

@@ -10,7 +10,7 @@ eta = 0:0.05:1;
 V_s = 1:40;
 
 % Tabular data: 
-% [eta V_s T_top(end) T_bot(end) phi(end) mean(alpha_e) mean(Vw) mean(Va) mean(L) mean(D) mean(M_air)];
+% [eta V_s T_top(end) T_bot(end) theta(end) mean(alpha_e) mean(Vw) mean(Va) mean(L) mean(D) mean(M_air)];
 table = [];
 
 % Now run through sweep simulation, saving data at each point

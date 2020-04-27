@@ -6,7 +6,7 @@ function qbit_animate_trajectory(h, t, x_vec, x_d, z_d, Fdes, l, save)
 % INPUTS
 % h - FIGURE OBJECT
 % t - [1xn] time vector
-% x - [Mxn] state vector where M = 3 => x, z, phi
+% x - [Mxn] state vector where M = 3 => x, z, theta
 % x_d - [1xn] x desired position at time t
 % z_d - [1xn] x desired position at time t
 % Fdes - [2xn] desired force vector
@@ -19,7 +19,7 @@ a = l*2;
 dt = t(2) - t(1);
 x = x_vec(1,:);
 z = x_vec(2,:);
-phi = x_vec(3,:) - pi/2;
+theta = x_vec(3,:) - pi/2;
 stale = .01;
 tic
 i = 1;
@@ -38,9 +38,9 @@ while i<=numel(t)
     plot(x(1:i), z(1:i), 'r','LineWidth',2);
     
     % Plot the vehicle
-%         plot([x(i) + a*cos(phi(i)), x(i) - a*cos(phi(i))],...
-%              [z(i) + a*sin(phi(i)), z(i) - a*sin(phi(i))] , 'b','LineWidth',6);
-    body = plot_vehicle(x(i),z(i),phi(i),l);
+%         plot([x(i) + a*cos(theta(i)), x(i) - a*cos(theta(i))],...
+%              [z(i) + a*sin(theta(i)), z(i) - a*sin(theta(i))] , 'b','LineWidth',6);
+    body = plot_vehicle(x(i),z(i),theta(i),l);
     
     plot(body,'FaceColor','blue')
     
@@ -48,7 +48,7 @@ while i<=numel(t)
     quiver(x(i),z(i),5*Fdes(1,i)/norm(Fdes(:,i)),5*Fdes(2,i)/norm(Fdes(:,i)),'m-','linewidth',2)
     
     % Plot body orientation
-%     quiver(x(i),z(i), cos(phi(i))*2, sin(phi(i))*2,'b-','linewidth',2)
+%     quiver(x(i),z(i), cos(theta(i))*2, sin(theta(i))*2,'b-','linewidth',2)
     
     B = 1.5;
     %     xlim([min(x_d) - B, max(x_d) + B]);

@@ -43,7 +43,7 @@ Iyy = (2.32e-3)*(scaling_factor^5);
 
 %% Final trim flight
 
-% This involves solving for T_top, T_bot, phi
+% This involves solving for T_top, T_bot, theta
 x0 = [m*g/2; m*g/2; pi/4];
 fun = @(x) trim_flight(x, cl_spline, cd_spline, cm_spline, m,g,l, chord, span, rho, eta, R, V_s);
     options = optimoptions('fsolve','Display','iter');
@@ -51,20 +51,20 @@ fun = @(x) trim_flight(x, cl_spline, cd_spline, cm_spline, m,g,l, chord, span, r
 [trim_soln,~,~,output] = fsolve(fun,x0,options);
 
 % From this solver we get our trim solution
-phi_star = trim_soln(3);
+theta_star = trim_soln(3);
 
 %% Construct DE solution
 v_r0 = 0;  % Initially at rest
 tspan = [0, t_star];
 
-[t, v_r] = ode45(@(t,v_r) path_DE(t ,v_r, m, g, rho, span, chord, t_star, phi_star, alpha_0, cl_spline, cd_spline), ...
+[t, v_r] = ode45(@(t,v_r) path_DE(t ,v_r, m, g, rho, span, chord, t_star, theta_star, alpha_0, cl_spline, cd_spline), ...
                 tspan, v_r0);
 
-function vdot_r = path_DE(t ,v_r, m, g, rho, span, chord, t_star, phi_star, alpha_0, cl_spline, cd_spline)
+function vdot_r = path_DE(t ,v_r, m, g, rho, span, chord, t_star, theta_star, alpha_0, cl_spline, cd_spline)
 % This houses the differential equation for v_r(t) that we're drying to solve
 
-% Given time t, phi_star, and alpha_0, find desired alpha (in rad):
-alpha_d = ((phi_star - alpha_0)/t_star)*t + alpha_0;
+% Given time t, theta_star, and alpha_0, find desired alpha (in rad):
+alpha_d = ((theta_star - alpha_0)/t_star)*t + alpha_0;
 
 % Now get Cl, Cd
 Cl = ppval(cl_spline, alpha_d*180/pi);

@@ -4,7 +4,7 @@ function F = trim_flight(x, cl_spline, cd_spline, cm_spline, m,g,l, cbar, s, rho
 % x [3x1] variables vector:
 %   x(1) = T_top
 %   x(2) = T_bot
-%   x(3) = phi
+%   x(3) = theta
 % m [1x1] mass
 % g [1x1] gravity
 % l [1x1] distance between rotors

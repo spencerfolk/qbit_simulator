@@ -1,12 +1,12 @@
 %%% This function will output thrust commands based on a nonlinear
-%%% geometric controller that tracks orientation [phi] and position [x,z].
+%%% geometric controller that tracks orientation [theta] and position [x,z].
 %%% Notably, this particular controller iterates to converge on a T_top and
 %%% T_bot that properly anticipates lift and drag at the new state
 %%% Spencer Folk 2020
 function [T_top, T_bot, Fdes] = qbit_iter_controller(current_state, desired_state, L, D, M_air, alpha_e, m, Iyy, l)
 
 % INPUTS -
-% current_state = [x z phi xdot zdot phidot]'
+% current_state = [x z theta xdot zdot thetadot]'
 % current_time - current time step (time(i))
 % L - current lift force
 % D - current drag force
@@ -49,10 +49,10 @@ motor_sat_bool = true;  % If motor thrust goes above saturation limit, this will
 %% Extract current and trajectory states for a given time
 x = current_state(1);
 z = current_state(2);
-phi = current_state(3);
+theta = current_state(3);
 xdot = current_state(4);
 zdot = current_state(5);
-phidot = current_state(6);
+thetadot = current_state(6);
 
 rT = desired_state;
 xT = rT(1);
@@ -63,8 +63,8 @@ xdotdotT = rT(5);
 zdotdotT = rT(6);
 
 %% Construct rotation matrices
-iRb = [cos(phi) , -sin(phi) ; sin(phi) , cos(phi)];
-iRe = [cos(phi - alpha_e) , -sin(phi - alpha_e) ; sin(phi - alpha_e) , cos(phi - alpha_e)];
+iRb = [cos(theta) , -sin(theta) ; sin(theta) , cos(theta)];
+iRe = [cos(theta - alpha_e) , -sin(theta - alpha_e) ; sin(theta - alpha_e) , cos(theta - alpha_e)];
 
 %% First iteration
 
@@ -82,14 +82,14 @@ u1 = b1'*Fdes;
 
 b1_des = Fdes/norm(Fdes);
 
-% Get desired phi
-phi_des = atan2(b1_des(2),b1_des(1));
+% Get desired theta
+theta_des = atan2(b1_des(2),b1_des(1));
 
 % Compute error
-e_phi = -atan2(b1(1)*b1_des(2) - b1(2)*b1_des(1), b1(1)*b1_des(1) + b1(2)*b1_des(2));
+e_theta = -atan2(b1(1)*b1_des(2) - b1(2)*b1_des(1), b1(1)*b1_des(1) + b1(2)*b1_des(2));
 
 % Compute u2:
-u2 = Iyy*(-K_R*e_phi - K_w*phidot) - M_air;
+u2 = Iyy*(-K_R*e_theta - K_w*thetadot) - M_air;
 
 T = inv([1 , 1 ; -l , l])*[u1 ; u2];
 
@@ -108,15 +108,15 @@ idx = 0;  % Safety idx just in case we get stuck in infinite loop
 if aero == true
     while error > 1e-5 && idx <= 1000
         % In each iteration, recompute L, D, M_air
-        % Then recompute Fdes and phi_des --> T_top, T_bot
+        % Then recompute Fdes and theta_des --> T_top, T_bot
         % Repeat until T_top and T_bot are no longer changing
         
-        % Recompute airspeeds given new orientation (phi_des) and T_top, T_bot
+        % Recompute airspeeds given new orientation (theta_des) and T_top, T_bot
         T_avg = 0.5*(T_top + T_bot);
         Vi = sqrt(xdotT^2 + zdotT^2);
         gamma = atan2(zdotT, xdotT);
-        alpha = phi_des - gamma;
-        Vw = sqrt( (Vi*cos(phi_des-gamma))^2 + (T_avg/(0.5*rho*pi*R^2)) );
+        alpha = theta_des - gamma;
+        Vw = sqrt( (Vi*cos(theta_des-gamma))^2 + (T_avg/(0.5*rho*pi*R^2)) );
         Va = sqrt( Vi^2 + Vw^2 + 2*Vi*Vw*cos(alpha) );
         
         if Va >= 1e-6 && Vi < Va
@@ -132,7 +132,7 @@ if aero == true
         M_air_new = 0.5*rho*Va^2*(chord*span)*chord*Cm*0;
         
         % Now recompute Fdes based on this new L, D, and M_air
-        iRe_des = [cos(phi_des - alpha_e) , -sin(phi_des - alpha_e) ; sin(phi_des - alpha_e) , cos(phi_des - alpha_e)];
+        iRe_des = [cos(theta_des - alpha_e) , -sin(theta_des - alpha_e) ; sin(theta_des - alpha_e) , cos(theta_des - alpha_e)];
         
         Fdes = m*rdotdot_des + [0 ; m*g] - iRe_des*[-D_new ; L_new];
         
@@ -141,14 +141,14 @@ if aero == true
         
         b1_des = Fdes/norm(Fdes);
         
-        % Get desired phi
-        phi_des = atan2(b1_des(2),b1_des(1));
+        % Get desired theta
+        theta_des = atan2(b1_des(2),b1_des(1));
         
         % Compute error
-        e_phi = -atan2(b1(1)*b1_des(2) - b1(2)*b1_des(1), b1(1)*b1_des(1) + b1(2)*b1_des(2));
+        e_theta = -atan2(b1(1)*b1_des(2) - b1(2)*b1_des(1), b1(1)*b1_des(1) + b1(2)*b1_des(2));
         
         % Compute u2:
-        u2 = Iyy*(-K_R*e_phi - K_w*phidot) - M_air_new;
+        u2 = Iyy*(-K_R*e_theta - K_w*thetadot) - M_air_new;
         
         T = inv([1 , 1 ; -l , l])*[u1 ; u2];
         

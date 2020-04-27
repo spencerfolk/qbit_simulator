@@ -10,7 +10,7 @@ polars = readmatrix(filename);
 alpha_data = [-flipud(polars(:,1)) ; polars(2:end,1)];
 cl_data = [-flipud(polars(:,2)) ; polars(2:end,2)];
 cd_data = [flipud(polars(:,3)) ; polars(2:end,3)];
-cm_data = [-flipud(polars(:,4)) ; polars(2:end,4)];
+cm_data = -[-flipud(polars(:,4)) ; polars(2:end,4)];
 
 alpha = alpha_data(1):0.01:alpha_data(end);
 cl = interp1(alpha_data, cl_data, alpha);

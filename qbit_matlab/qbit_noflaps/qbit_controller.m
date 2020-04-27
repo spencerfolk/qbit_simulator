@@ -1,10 +1,10 @@
 %%% This function will output thrust commands based on a nonlinear
-%%% geometric controller that tracks orientation [phi] and position [x,z].
+%%% geometric controller that tracks orientation [theta] and position [x,z].
 %%% Spencer Folk 2020
 function [T_top, T_bot, Fdes] = qbit_controller(current_state, desired_state, L, D, M_air, alpha_e, m, Iyy, l)
 
 % INPUTS -
-% current_state = [x z phi xdot zdot phidot]'
+% current_state = [x z theta xdot zdot thetadot]'
 % current_time - current time step (time(i))
 % L - current lift force
 % D - current drag force
@@ -35,10 +35,10 @@ motor_sat_bool = false;  % If motor thrust goes above saturation limit, this wil
 %% Extract current and trajectory states for a given time
 x = current_state(1);
 z = current_state(2);
-phi = current_state(3);
+theta = current_state(3);
 xdot = current_state(4);
 zdot = current_state(5);
-phidot = current_state(6);
+thetadot = current_state(6);
 
 rT = desired_state;  % Put function here trajectory(current_time)
 xT = rT(1);
@@ -49,8 +49,8 @@ xdotdotT = rT(5);
 zdotdotT = rT(6);
 
 %% Construct rotation matrices
-iRb = [cos(phi) , -sin(phi) ; sin(phi) , cos(phi)];
-iRe = [cos(phi - alpha_e) , -sin(phi - alpha_e) ; sin(phi - alpha_e) , cos(phi - alpha_e)];
+iRb = [cos(theta) , -sin(theta) ; sin(theta) , cos(theta)];
+iRe = [cos(theta - alpha_e) , -sin(theta - alpha_e) ; sin(theta - alpha_e) , cos(theta - alpha_e)];
 
 %% Computing u1
 
@@ -74,11 +74,11 @@ u1 = b1'*Fdes;
 b1_des = Fdes/norm(Fdes);
 
 % Compute error
-% e_phi = acos(dot(b1,b1_des));
-e_phi = -atan2(b1(1)*b1_des(2) - b1(2)*b1_des(1), b1(1)*b1_des(1) + b1(2)*b1_des(2));
+% e_theta = acos(dot(b1,b1_des));
+e_theta = -atan2(b1(1)*b1_des(2) - b1(2)*b1_des(1), b1(1)*b1_des(1) + b1(2)*b1_des(2));
 
 % Compute u2:
-u2 = Iyy*(-K_R*e_phi - K_w*phidot) - M_air;
+u2 = Iyy*(-K_R*e_theta - K_w*thetadot) - M_air;
 
 %% Computing actuator outputs
 % We can readily solve for thrust by solving this system:

@@ -94,8 +94,8 @@ V_s = 30;
 
 T_top = linspace(0,10,50);
 T_bot = linspace(0,10,50);
-phi = linspace(0,pi/2,50);
+theta = linspace(0,pi/2,50);
 
-F = zeros(3,length(T_top)*length(T_bot)*length(phi));
+F = zeros(3,length(T_top)*length(T_bot)*length(theta));
 
 
