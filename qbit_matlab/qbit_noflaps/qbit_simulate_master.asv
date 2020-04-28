@@ -10,13 +10,14 @@ close all
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
 animate = false; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
-traj_type = "const_height"; % Type of trajectory:
+traj_type = "trim"; % Type of trajectory:
 %                           "cubic",
 %                           "trim" (for steady state flight),
 %                           "increasing" (const acceleration)
+%                           "decreasing" (const decelleration)
 %                           "const_height" (constant height)
-%                           "stepV" (step response in speed)
-%                           "stepA" (step response in angle)
+%                           "stepP" (step response in position at hover)
+%                           "stepA" (step response in angle at hover)
 
 %% Initialize Constants
 in2m = 0.0254;
@@ -203,7 +204,7 @@ elseif traj_type == "const_height"
     alpha_i = pi/2;  % Initial value for alpha_des
     
     alpha_traj_type = "linear";
-    aoa_rate = 1*(pi/180);  % Rate of change of AoA, first number in degrees
+    aoa_rate = 5*(pi/180);  % Rate of change of AoA, first number in degrees
     if alpha_traj_type == "linear"
         end_time = abs(alpha_f - alpha_i)/aoa_rate;
         time = 0:dt:end_time;
@@ -222,6 +223,11 @@ elseif traj_type == "const_height"
     
     fprintf("\nTrajectory type: Continuous Constant Height")
     fprintf("\n-------------------------------------------\n")
+    
+elseif traj_type == "stepP" || traj_type == "stepA"
+    % For step hover, this is easy, we just need to set our trajectory to
+    % zeros for all time
+    time = 0:dt:end_time;
     
 else
     error("Incorrect trajectory type -- check traj_type variable")
@@ -276,9 +282,11 @@ z(1) = 0;
 if traj_type == "trim" || traj_type == "decreasing"
     xdot(1) = V_s;
     theta(1) = init_conds(3);
-    xdot(1) = V_s;
-    theta(1) = init_conds(3);
-end
+elseif traj_type == "stepP"
+    x(1) = 1;
+    z(1) = 0;
+elseif traj_type == "stepA"
+    theta(1) = pi/2 
 zdot(1) = 0;
 
 % Trajectory state
@@ -329,6 +337,10 @@ for i = 2:length(time)
         xzdotdot_temp = [xdotdot_des(i); 0];
         xzdot_temp = [xdot_des(i); 0];
         xz_temp = [x_des(i); 0];
+    elseif traj_type == "stepA" || traj_type == "stepP"
+        xzdotdot_temp = [0 ; 0];
+        xzdot_temp = [0 ; 0];
+        xz_temp = [0 ; 0];
     end
     
     desired_state(:,i) = [xz_temp' , xzdot_temp' , xzdotdot_temp']; % 6x1
@@ -471,7 +483,7 @@ end
 
 % States
 figure()
-sgtitle("States")
+sgtitle("States",'interpreter','latex')
 
 subplot(3,1,1)
 plot(time, x, 'r-','linewidth',1.5)
@@ -499,7 +511,7 @@ xlabel("Time [s]",'interpreter','latex')
 grid on
 
 figure()
-sgtitle("State Derivatives")
+sgtitle("State Derivatives",'interpreter','latex')
 
 subplot(3,1,1)
 plot(time, xdot, 'r-','linewidth',1.5)
@@ -525,7 +537,7 @@ xlabel("Time [s]",'interpreter','latex')
 grid on
 
 figure()
-sgtitle("Body Acceleration")
+sgtitle("Body Acceleration",'interpreter','latex')
 
 subplot(2,1,1)
 plot(time,xdotdot,'r-','linewidth',1.5)
@@ -547,7 +559,7 @@ xlabel("Time [s]",'interpreter','latex')
 grid on
 
 figure()
-sgtitle("Aero Forces/Moments")
+sgtitle("Aero Forces/Moments",'interpreter','latex')
 
 subplot(3,1,1)
 plot(time, L, 'r-','linewidth',1.5)
@@ -569,7 +581,7 @@ xlabel("Time [s]",'interpreter','latex')
 grid on
 
 figure()
-sgtitle("Airflow Over Wing")
+sgtitle("Airflow Over Wing",'interpreter','latex')
 
 subplot(3,1,1)
 plot(time, Va, 'r-','linewidth',1.5)
@@ -591,8 +603,8 @@ xlabel("Time (s)")
 grid on
 
 figure()
-titl = strcat("Misc Angles, \eta = ",num2str(eta));
-sgtitle(titl)
+titl = strcat("Misc Angles, $\eta$ = ",num2str(eta));
+sgtitle(titl,'interpreter','latex')
 
 subplot(3,1,1)
 plot(time, alpha, 'r-','linewidth',1.5)

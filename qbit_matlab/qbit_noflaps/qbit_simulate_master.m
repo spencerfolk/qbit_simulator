@@ -10,13 +10,14 @@ close all
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
 animate = false; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
-traj_type = "const_height"; % Type of trajectory:
+traj_type = "increasing"; % Type of trajectory:
 %                           "cubic",
 %                           "trim" (for steady state flight),
 %                           "increasing" (const acceleration)
+%                           "decreasing" (const decelleration)
 %                           "const_height" (constant height)
-%                           "stepV" (step response in speed)
-%                           "stepA" (step response in angle)
+%                           "stepP" (step response in position at hover)
+%                           "stepA" (step response in angle at hover)
 
 %% Initialize Constants
 in2m = 0.0254;
@@ -92,7 +93,7 @@ Iyy = (2.32e-3)*(scaling_factor^5);
 %% Trajectory Generation
 % Generate a trajectory based on the method selected. If cubic, use cubic
 % splines. If trim, create a constant speed, trim flight.
-V_s = 20;  % Target velocity
+V_s = 35;  % Target velocity
 end_time = 10;   % Duration of trajectory, this will be rewritten if cubic spline is selected
 
 if traj_type == "cubic"
@@ -203,7 +204,7 @@ elseif traj_type == "const_height"
     alpha_i = pi/2;  % Initial value for alpha_des
     
     alpha_traj_type = "linear";
-    aoa_rate = 1*(pi/180);  % Rate of change of AoA, first number in degrees
+    aoa_rate = 5*(pi/180);  % Rate of change of AoA, first number in degrees
     if alpha_traj_type == "linear"
         end_time = abs(alpha_f - alpha_i)/aoa_rate;
         time = 0:dt:end_time;
@@ -222,6 +223,11 @@ elseif traj_type == "const_height"
     
     fprintf("\nTrajectory type: Continuous Constant Height")
     fprintf("\n-------------------------------------------\n")
+    
+elseif traj_type == "stepP" || traj_type == "stepA"
+    % For step hover, this is easy, we just need to set our trajectory to
+    % zeros for all time
+    time = 0:dt:end_time;
     
 else
     error("Incorrect trajectory type -- check traj_type variable")
@@ -247,9 +253,14 @@ thetadotdot = zeros(size(time));
 
 % Inputs
 
-T_top = init_conds(1)*ones(size(time));
-T_bot = init_conds(2)*ones(size(time));
-
+if traj_type == "trim" || traj_type == "decreasing"
+    T_top = init_conds(1)*ones(size(time));
+    T_bot = init_conds(2)*ones(size(time));
+    
+else
+    T_top = m*g*ones(size(time));
+    T_bot = m*g*ones(size(time));
+end
 % Misc Variables (also important)
 alpha = zeros(size(time));
 alpha_e = zeros(size(time));
@@ -276,8 +287,11 @@ z(1) = 0;
 if traj_type == "trim" || traj_type == "decreasing"
     xdot(1) = V_s;
     theta(1) = init_conds(3);
-    xdot(1) = V_s;
-    theta(1) = init_conds(3);
+elseif traj_type == "stepP"
+    x(1) = 0;
+    z(1) = -1;
+elseif traj_type == "stepA"
+    theta(1) = pi/2 - pi/4;
 end
 zdot(1) = 0;
 
@@ -329,6 +343,10 @@ for i = 2:length(time)
         xzdotdot_temp = [xdotdot_des(i); 0];
         xzdot_temp = [xdot_des(i); 0];
         xz_temp = [x_des(i); 0];
+    elseif traj_type == "stepA" || traj_type == "stepP"
+        xzdotdot_temp = [0 ; 0];
+        xzdot_temp = [0 ; 0];
+        xz_temp = [0 ; 0];
     end
     
     desired_state(:,i) = [xz_temp' , xzdot_temp' , xzdotdot_temp']; % 6x1
@@ -428,6 +446,8 @@ Va(1) = Va(2);
 Vw(1) = Vw(2);
 T_top(1) = T_top(2);
 T_bot(1) = T_bot(2);
+xdotdot(1) = xdotdot(2);
+zdotdot(1) = zdotdot(2);
 
 a_v_Va = (1/2)*rho*(chord*span)*Va.^2/(m*g);
 
