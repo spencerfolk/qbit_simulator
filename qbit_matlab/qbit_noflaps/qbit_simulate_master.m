@@ -10,7 +10,7 @@ close all
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
 animate = false; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
-traj_type = "increasing"; % Type of trajectory:
+traj_type = "const_height"; % Type of trajectory:
 %                           "cubic",
 %                           "trim" (for steady state flight),
 %                           "increasing" (const acceleration)
@@ -26,7 +26,7 @@ rho = 1.2;
 stall_angle = 10;  % deg, identified from plot of cl vs alpha
 dt = 0.01;   % Simulation time step
 
-eta = 0;   % Efficiency of the down wash on the wings from the propellers
+eta = 0.0;   % Efficiency of the down wash on the wings from the propellers
 
 % Ritz tailsitter
 % m = 0.150;
@@ -56,7 +56,7 @@ eta = 0;   % Efficiency of the down wash on the wings from the propellers
 % m_airframe = 0.215;
 % m_battery = 0.150;
 % m = m_airframe + m_battery;
-%
+% 
 % Iyy = 2.32e-3;
 % span = 15*in2m;
 % l = 6*in2m;
@@ -93,7 +93,7 @@ Iyy = (2.32e-3)*(scaling_factor^5);
 %% Trajectory Generation
 % Generate a trajectory based on the method selected. If cubic, use cubic
 % splines. If trim, create a constant speed, trim flight.
-V_s = 35;  % Target velocity
+V_s = 50;  % Target velocity
 end_time = 10;   % Duration of trajectory, this will be rewritten if cubic spline is selected
 
 if traj_type == "cubic"
@@ -219,7 +219,8 @@ elseif traj_type == "const_height"
     end
     
     % Get temp trajectory variables and save them
-    [x_des, xdot_des, xdotdot_des]=const_height_traj_generator(dt,time,alpha_des,cl_spline, cd_spline,rho,m,g,chord,span);
+    accel_bool = true;  % Consider acceleration when generating the trajectory
+    [x_des, xdot_des, xdotdot_des]=const_height_traj_generator(dt,time,alpha_des,cl_spline, cd_spline,rho,m,g,chord,span, accel_bool);
     
     fprintf("\nTrajectory type: Continuous Constant Height")
     fprintf("\n-------------------------------------------\n")
@@ -273,6 +274,10 @@ M_air = zeros(size(time));
 Vi = zeros(size(time));
 Va = zeros(size(time));
 Vw = zeros(size(time));
+
+% Bookkeeping the airflow over the top and bottom wings
+Vw_top = zeros(size(time));
+Vw_bot = zeros(size(time));
 
 Fdes = zeros(2,length(time));  % Desired force vector
 
@@ -367,7 +372,9 @@ for i = 2:length(time)
     
     %     Vw(i-1) = 1.2*sqrt( T_avg/(8*rho*pi*R^2) );
     Vw(i-1) = eta*sqrt( (Vi(i-1)*cos(theta(i-1)-gamma(i-1)))^2 + (T_avg/(0.5*rho*pi*R^2)) );
-    
+    Vw_top(i-1) = eta*sqrt( (Vi(i-1)*cos(theta(i-1)-gamma(i-1)))^2 + (T_top(i-1)/(0.5*rho*pi*R^2)) );
+    Vw_bot(i-1) = eta*sqrt( (Vi(i-1)*cos(theta(i-1)-gamma(i-1)))^2 + (T_bot(i-1)/(0.5*rho*pi*R^2)) );
+
     % Compute true airspeed over the wings using law of cosines
     Va(i-1) = sqrt( Vi(i-1)^2 + Vw(i-1)^2 + 2*Vi(i-1)*Vw(i-1)*cos( alpha(i-1)) );
     
@@ -428,6 +435,8 @@ M_air(end) = M_air(end-1);
 Va(end) = Va(end-1);
 Vi(end) = Vi(end-1);
 Vw(end) = Vw(end-1);
+Vw_top(end) = Vw_top(end-1);
+Vw_bot(end) = Vw_bot(end-1);
 
 alpha(end) = alpha(end-1);
 alpha_e(end) = alpha_e(end-1);
@@ -444,6 +453,8 @@ alpha_e(1:(alpha_e_startidx-1)) = alpha_e(alpha_e_startidx);
 
 Va(1) = Va(2);
 Vw(1) = Vw(2);
+Vw_top(1) = Vw_top(2);
+Vw_bot(1) = Vw_bot(2);
 T_top(1) = T_top(2);
 T_bot(1) = T_bot(2);
 xdotdot(1) = xdotdot(2);
@@ -605,9 +616,13 @@ grid on
 
 subplot(3,1,3)
 plot(time, Vw, 'b-','linewidth',1.5)
+hold on
+plot(time, Vw_top, 'k--', 'linewidth', 1.5)
+plot(time, Vw_bot, 'r--', 'linewidth', 1.5)
 ylabel('$V_w$ [m/s]','interpreter','latex')
 xlim([0,time(end)])
 xlabel("Time (s)")
+legend("Average","Top","Bottom")
 grid on
 
 figure()
@@ -621,7 +636,6 @@ plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
 plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
 ylabel('$\alpha$ [rad]','interpreter','latex')
 xlim([0,time(end)])
-% xlim([0,18])
 grid on
 
 subplot(3,1,2)
@@ -637,7 +651,6 @@ end
 ylabel('$\alpha_e$ [rad]','interpreter','latex')
 xlim([0,time(end)])
 grid on
-% xlim([0,18])
 % maxi = find(alpha_e == max(alpha_e));
 % plot(time(maxi),alpha_e(maxi),'ro','linewidth',2)
 % text(end_time/2,-1,strcat("(\alpha_e)_{SS} = ",num2str(mean(alpha_e((end-100):end))),"-rad"))
@@ -660,6 +673,7 @@ plot(time, T_top, 'k-', 'linewidth', 1.5)
 hold on
 plot(time, T_bot, 'r-', 'linewidth', 1.5)
 plot(time, 0.5*(T_top + T_bot), 'g-', 'linewidth', 1.5)
+xlim([0,time(end)])
 xlabel("Time [s]",'interpreter','latex')
 ylabel("Thrust [N]",'interpreter','latex')
 legend("T_{top}", "T_{bot}", "T_{avg}")
