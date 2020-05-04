@@ -54,7 +54,7 @@ figure()
 plot(a_v, alpha,'g-','linewidth',2)
 hold on
 plot(a_v_unstable, alpha(unstable_conds), 'r-', 'linewidth',2)
-plot(unstable_region,'FaceColor','red')
+% plot(unstable_region,'FaceColor','red')
 xlabel("a_v [ ]")
 ylabel("\alpha [deg]")
 legend("Stable", "Unstable")

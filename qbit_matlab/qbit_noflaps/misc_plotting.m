@@ -1,12 +1,12 @@
 figure()
 sgtitle("Forward Airspeed vs Time",'interpreter','latex')
-plot(time, xdot, 'r-','linewidth',1.5)
-hold on
+% plot(time, xdot, 'r-','linewidth',1.5)
+% hold on
 plot(time, desired_state(3,:), 'k--', 'linewidth',1)
 ylabel('$\dot{x}$ [m/s]','interpreter','latex')
 xlabel('Time [s]','interpreter','latex')
 xlim([0,time(end)])
-legend("Actual","Desired")
+% legend("Actual","Desired")
 grid on
 
 figure()

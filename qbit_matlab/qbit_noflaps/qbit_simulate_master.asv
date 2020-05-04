@@ -1,6 +1,6 @@
 %%% Simulating the dynamics of the qbit. This script will establish state
 %%% variables, get a trajectory, input that trajectory into a controller to
-%%% get commands, and simulate the dynamics subject to those inputs.
+%%% get commands, and simulate the dynamis subject to those inputs.
 %%% Spencer Folk 2020
 
 clear
@@ -11,7 +11,7 @@ aero = true;  % This bool determines whether or not we compute aerodynamic force
 animate = false; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
 integrate_method = "rk4";  % Type of integration - either 'euler' or 'rk4'
-traj_type = "increasing"; % Type of trajectory:
+traj_type = "const_height"; % Type of trajectory:
 %                           "cubic",
 %                           "trim" (for steady state flight),
 %                           "increasing" (const acceleration)
@@ -29,15 +29,6 @@ stall_angle = 10;  % deg, identified from plot of cl vs alpha
 dt = 0.01;   % Simulation time step
 
 eta = 0.0;   % Efficiency of the down wash on the wings from the propellers
-
-linear_acc = 15;   % m/s^2, the acceleration/decelleration used in 
-%                  "increasing" and "decreasing" trajectories
-angular_vel = 0.1;  % deg/s, the desired change in attitude used by the 
-%                  "const_height" trajectory
-V_s = 30;         % m/s, set velocity used in "increasing", "decreasing", and
-%                  "trim" trajectories...
-end_time = 10;    % Duration of trajectory, this will be REWRITTEN by all but
-%                  "trim" trajectory.
 
 % Ritz tailsitter
 % m = 0.150;
@@ -85,6 +76,17 @@ scaling_factor = span/(15*in2m);
 m = (0.3650)*(scaling_factor^3);  % Mass scales with R^3
 Iyy = (2.32e-3)*(scaling_factor^5);
 
+% Aero coefficients that act on the lift/drag coefficients to match that of
+% "experimental" (in reality, simulation) data from XFOIL
+
+% c0 = 4.80914;  % coeff acts as a scaling factor on Cl, Cm
+% c1 = 0.02;     % coeff acts as a shifting factor on Cd
+% c2 = 0.61929;  % coeff acts as a scaling factor on Cd
+
+% c0 = 1;
+% c1 = 0;
+% c2 = 1;
+
 %% Generate Airfoil Look-up
 % This look up table data will be used to estimate lift, drag, moment given
 % the angle of attack and interpolation from this data.
@@ -93,6 +95,8 @@ Iyy = (2.32e-3)*(scaling_factor^5);
 %% Trajectory Generation
 % Generate a trajectory based on the method selected. If cubic, use cubic
 % splines. If trim, create a constant speed, trim flight.
+V_s = 30;  % Target velocity
+end_time = 10;   % Duration of trajectory, this will be rewritten if cubic spline is selected
 
 if traj_type == "cubic"
     waypoints = [0,40; 0,0];
@@ -153,7 +157,7 @@ elseif traj_type == "increasing"
     
     init_conds = [m*g/2; m*g/2 ; pi/2];
     V_end = V_s;
-    a_s = linear_acc;  % m/s^2, acceleration used for transition
+    a_s = 3;  % m/s^2, acceleration used for transition
     
     end_time = V_end/a_s;
     
@@ -175,7 +179,7 @@ elseif traj_type == "decreasing"
     [init_conds,~,~,output] = fsolve(fun,x0,options);
     
     V_start = V_s;
-    a_s = linear_acc;   % m/s^2, decelleration used for transition
+    a_s = 1;   % m/s^2, decelleration used for transition
     end_time = V_start/a_s;
     
     % Time vector
@@ -202,7 +206,7 @@ elseif traj_type == "const_height"
     alpha_i = pi/2;  % Initial value for alpha_des
     
     alpha_traj_type = "linear";
-    aoa_rate = angular_vel*(pi/180);  % Rate of change of AoA, first number in degrees
+    aoa_rate = 5*(pi/180);  % Rate of change of AoA, first number in degrees
     if alpha_traj_type == "linear"
         end_time = abs(alpha_f - alpha_i)/aoa_rate;
         time = 0:dt:end_time;
