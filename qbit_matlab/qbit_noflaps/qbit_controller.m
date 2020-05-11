@@ -1,7 +1,7 @@
 %%% This function will output thrust commands based on a nonlinear
 %%% geometric controller that tracks orientation [theta] and position [x,z].
 %%% Spencer Folk 2020
-function [T_top, T_bot, Fdes] = qbit_controller(current_state, desired_state, L, D, M_air, alpha_e, m, Iyy, l)
+function [T_top, T_bot, Fdes] = qbit_controller(current_state, desired_state, L, D, M_air, alpha_e, m, Ixx, l)
 
 % INPUTS -
 % current_state = [x z theta xdot zdot thetadot]'
@@ -11,20 +11,20 @@ function [T_top, T_bot, Fdes] = qbit_controller(current_state, desired_state, L,
 % M_air - current pitch moment
 % alpha_e - current effective angle of attack
 % m - vehicle mass
-% Iyy - vehicle inertia about y axis
+% Ixx - vehicle inertia about y axis
 % l - distance between each rotor
 
 %% Gains and constants
 K_p = [5.8*2 , 0 ; 0 , 5.8*3];
 % K_d = [8.41*2 , 0 ; 0 , 8.41*3];
-K_d = 2*sqrt(K_p(1,1));
+K_d = 2*sqrt(K_p(1,1))*eye(2);
 
-K_R = 373.6489/5;
+K_R = 373.6489/1;
 % K_w = 19.333;
 K_w = 2*sqrt(K_R);
 
 g = 9.81;
-max_motor_thrust = 0.15*9.81*2; % N, determined by estimating max thrust of a single motor and multiplying by 2
+max_motor_thrust = 0.15*9.81*4; % N, determined by estimating max thrust of a single motor and multiplying by 2
 
 % Booleans -- for clarity, true nominally means it will be allowed or enabled.
 aero = true;   % This bool determines whether or not the controller is aware of aerodynamic forces
@@ -78,7 +78,7 @@ b1_des = Fdes/norm(Fdes);
 e_theta = -atan2(b1(1)*b1_des(2) - b1(2)*b1_des(1), b1(1)*b1_des(1) + b1(2)*b1_des(2));
 
 % Compute u2:
-u2 = Iyy*(-K_R*e_theta - K_w*thetadot) - M_air;
+u2 = Ixx*(-K_R*e_theta - K_w*thetadot) - M_air;
 
 %% Computing actuator outputs
 % We can readily solve for thrust by solving this system:

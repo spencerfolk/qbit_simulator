@@ -1,4 +1,4 @@
-function xdot = qbit_longitudinal_dynamics(x,u, m, g, Iyy, l, eta, rho, R, chord, span, cl_spline, cd_spline, cm_spline)
+function xdot = qbit_longitudinal_dynamics(x,u, m, g, Ixx, l, eta, rho, R, chord, span, cl_spline, cd_spline, cm_spline)
 %%% Dynamics for the qbit in the state space form.
 % Inputs --
 % x [4x1] - [Vi, gamma, theta, thetadot,  x, z] 
@@ -32,7 +32,7 @@ Cm = ppval(cm_spline, alpha_e*180/pi);
 Vidot = ( (u(1)+u(2))*cos(x(3)-x(2)) - (1/2)*rho*chord*span*Va^2*(Cl*sin(x(3)-x(2)-alpha_e) + Cd*cos(x(3)-x(2)-alpha_e)) - m*g*sin(x(2)) )/m;
 gammadot = ( (u(1)+u(2))*sin(x(3)-x(2)) + (1/2)*rho*chord*span*Va^2*(Cl*cos(x(3)-x(2)-alpha_e) - Cd*sin(x(3)-x(2)-alpha_e)) - m*g*cos(x(2)) )/(m*x(1));
 thetadot = x(4);
-thetadotdot = ((1/2)*rho*chord*span*Va^2*Cm*chord + l*(u(2)-u(1)))/Iyy;
+thetadotdot = ((1/2)*rho*chord*span*Va^2*Cm*chord + l*(u(2)-u(1)))/Ixx;
 xdot = x(1)*cos(x(2));
 zdot = x(1)*sin(x(2));
 

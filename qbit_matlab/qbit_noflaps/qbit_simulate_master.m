@@ -16,10 +16,11 @@ traj_type = "increasing"; % Type of trajectory:
 %                           "trim" (for steady state flight),
 %                           "increasing" (const acceleration)
 %                           "decreasing" (const decelleration)
-%                           "const_height" (constant height)
+%                           "const_height" (constant height, continuous AoA)
 %                           "stepP" (step response in position at hover)
-%                           "stepA" (step response in angle at hover)
-
+%                           "stepA_hover" (step response in angle at hover)
+%                           "stepV" (step response in airspeed at trim)
+%                           "stepA_FF" (step response in angle at forward flight)
 
 %% Initialize Constants
 in2m = 0.0254;
@@ -30,18 +31,26 @@ dt = 0.01;   % Simulation time step
 
 eta = 0.0;   % Efficiency of the down wash on the wings from the propellers
 
-linear_acc = 15;   % m/s^2, the acceleration/decelleration used in 
+linear_acc = 3;   % m/s^2, the acceleration/decelleration used in
 %                  "increasing" and "decreasing" trajectories
-angular_vel = 0.1;  % deg/s, the desired change in attitude used by the 
+angular_vel = 5;   % deg/s, the desired change in attitude used by the
 %                  "const_height" trajectory
-V_s = 30;         % m/s, set velocity used in "increasing", "decreasing", and
+V_s = 30;          % m/s, set velocity used in "increasing", "decreasing", and
 %                  "trim" trajectories...
-end_time = 10;    % Duration of trajectory, this will be REWRITTEN by all but
-%                  "trim" trajectory.
+end_time = 5;     % Duration of trajectory, this will be REWRITTEN by all but
+%                  "trim" and "step___" trajectories.
+
+step_angle = -pi/4; % the angular step used by stepA_hover (positive counter clockwise)
+step_x = -1;          % step in the x direction used by stepP
+step_z = -1;          % step in the z direction used by stepP
+step_V = -3;          % step in forward airspeed used by stepV
+
+buffer_time = 0;  % s, sim time AFTER transition maneuver theoretically ends
+%                   ... this is to capture settling of the controller
 
 % Ritz tailsitter
 % m = 0.150;
-% Iyy = 2.32e-3;
+% Ixx = 2.32e-3;
 % span = 15*in2m;
 % l = 6*in2m;
 % chord = 5*in2m;
@@ -49,7 +58,7 @@ end_time = 10;    % Duration of trajectory, this will be REWRITTEN by all but
 
 % UMD QBiT
 % m = 3.76;
-% Iyy = 2.32e-1;  % Estimated with scaling laws based on mass and chord
+% Ixx = 2.32e-1;  % Estimated with scaling laws based on mass and chord
 % span = 1.02;
 % chord = 0.254;
 % l = 19*in2m;
@@ -57,7 +66,7 @@ end_time = 10;    % Duration of trajectory, this will be REWRITTEN by all but
 
 % UMD QBiT Refined (thrust from motors don't even balance the weight...)
 % m = 1.264;
-% Iyy = 2.32e-2;  % Estimated with scaling laws based on mass and chord
+% Ixx = 2.32e-2;  % Estimated with scaling laws based on mass and chord
 % span = 1.02;
 % chord = 0.254;
 % l = 19*in2m;
@@ -68,7 +77,7 @@ end_time = 10;    % Duration of trajectory, this will be REWRITTEN by all but
 % m_battery = 0.150;
 % m = m_airframe + m_battery;
 %
-% Iyy = 2.32e-3;
+% Ixx = 2.32e-3;
 % span = 15*in2m;
 % l = 6*in2m;
 % chord = 5*in2m;
@@ -83,7 +92,7 @@ R = 4.5*in2m;   % Estimated 9in prop
 
 scaling_factor = span/(15*in2m);
 m = (0.3650)*(scaling_factor^3);  % Mass scales with R^3
-Iyy = (2.32e-3)*(scaling_factor^5);
+Ixx = (2.32e-3)*(scaling_factor^5);
 
 %% Generate Airfoil Look-up
 % This look up table data will be used to estimate lift, drag, moment given
@@ -95,10 +104,10 @@ Iyy = (2.32e-3)*(scaling_factor^5);
 % splines. If trim, create a constant speed, trim flight.
 
 if traj_type == "cubic"
-    waypoints = [0,40; 0,0];
+    %     waypoints = [0,40; 0,0];
     % waypoints = [0,0,10 ; 0,10,10];  % aggressive maneuver
     % waypoints = [0,20,40 ; 0,0,0];  % Straight line horizontal trajectory
-    % waypoints = [0,80,160 ; 0,0,0];  % Straight line horizontal trajectory, longer
+    waypoints = [0,80,160 ; 0,0,0];  % Straight line horizontal trajectory, longer
     % waypoints = [0,0,0 ; 0, 20, 40]; % Straight line vertical trajectory
     % waypoints = [0,10,40 ; 0,10,10];  % Larger distance shows off lift benefit
     % waypoints = [0,20,40 ; 0,5,10]; % diagonal
@@ -155,7 +164,7 @@ elseif traj_type == "increasing"
     V_end = V_s;
     a_s = linear_acc;  % m/s^2, acceleration used for transition
     
-    end_time = V_end/a_s;
+    end_time = V_end/a_s + buffer_time;
     
     % Time vector
     t_f = end_time;
@@ -176,7 +185,7 @@ elseif traj_type == "decreasing"
     
     V_start = V_s;
     a_s = linear_acc;   % m/s^2, decelleration used for transition
-    end_time = V_start/a_s;
+    end_time = V_start/a_s + buffer_time;
     
     % Time vector
     t_f = end_time;
@@ -190,7 +199,7 @@ elseif traj_type == "const_height"
     % return a corresponding v(t), a(t), x/z(t) from that.
     
     % Need to solve for an estimate of trim flight:
-    x0 = [m*g/2; m*g/2; 0];
+    x0 = [m*g/2; m*g/2; pi/4];
     fun = @(x) trim_flight(x, cl_spline, cd_spline, cm_spline, m,g,l, chord, span, rho, eta, R, V_s);
     %     options = optimoptions('fsolve','Display','iter');
     options = optimoptions('fsolve','Display','none');
@@ -223,11 +232,30 @@ elseif traj_type == "const_height"
     fprintf("\nTrajectory type: Continuous Constant Height")
     fprintf("\n-------------------------------------------\n")
     
-elseif traj_type == "stepP" || traj_type == "stepA"
+elseif traj_type == "stepP" || traj_type == "stepA_hover"
     % For step hover, this is easy, we just need to set our trajectory to
     % zeros for all time
     time = 0:dt:end_time;
     
+    fprintf("\nTrajectory type: Step Response at Hover")
+    fprintf("\n---------------------------------------\n")
+    
+elseif traj_type == "stepV" || traj_type == "stepA_FF"
+    % For the step in airspeed, we need to first set trim just like "trim"
+    x0 = [m*g/2; m*g/2; pi/4];
+    fun = @(x) trim_flight(x, cl_spline, cd_spline, cm_spline, m,g,l, chord, span, rho, eta, R, V_s);
+    %     options = optimoptions('fsolve','Display','iter');
+    options = optimoptions('fsolve','Display','none','PlotFcn',@optimplotfirstorderopt);
+    [init_conds,~,~,output] = fsolve(fun,x0,options);
+    
+    %     output.iterations
+    
+    % Time vector
+    t_f = end_time;
+    time = 0:dt:t_f;
+    
+    fprintf("\nTrajectory type: Step in Flight")
+    fprintf("\n-------------------------------\n")
 else
     error("Incorrect trajectory type -- check traj_type variable")
 end
@@ -293,11 +321,17 @@ z(1) = 0;
 if traj_type == "trim" || traj_type == "decreasing"
     xdot(1) = V_s;
     theta(1) = init_conds(3);
+elseif traj_type == "stepV"
+    xdot(1) = V_s + step_V;
+    theta(1) = init_conds(3);
+elseif traj_type == "stepA_FF"
+    xdot(1) = V_s;
+    theta(1) = init_conds(3) + step_angle;
 elseif traj_type == "stepP"
-    x(1) = 0;
-    z(1) = -1;
-elseif traj_type == "stepA"
-    theta(1) = pi/2 - pi/4;
+    x(1) = step_x;
+    z(1) = step_z;
+elseif traj_type == "stepA_hover"
+    theta(1) = pi/2 + step_angle;
 end
 zdot(1) = 0;
 
@@ -325,31 +359,37 @@ for i = 2:length(time)
             xzdot_temp = [0;0];
             xzdotdot_temp = [0;0];
         end
-    elseif traj_type == "trim"
+    elseif traj_type == "trim" || traj_type == "stepV" || traj_type == "stepA_FF"
         xzdotdot_temp = [0 ; 0];
         xzdot_temp = [V_s ; 0];
         xz_temp = [V_s*time(i-1) ; 0];
     elseif traj_type == "increasing"
-        if time(i) < end_time
+        if time(i) < (end_time-buffer_time)
             xzdotdot_temp = [a_s ; 0];
             xzdot_temp = [a_s*time(i-1) ; 0];
             xz_temp = [(1/2)*a_s*(time(i-1)^2) ; 0];
         else
             xzdotdot_temp = [0 ; 0];
             xzdot_temp = [V_s ; 0];
-            xz_temp = [(1/2)*a_s*(end_time^2) + V_s*(time(i) - end_time) ; 0];
+            xz_temp = [(1/2)*a_s*((end_time-buffer_time)^2) + V_s*(time(i) - (end_time-buffer_time)) ; 0];
         end
     elseif traj_type == "decreasing"
-        xzdotdot_temp = [-a_s ; 0];
-        xzdot_temp = [V_start-a_s*time(i-1) ; 0];
-        xz_temp = [V_start*time(i-1)-(1/2)*a_s*(time(i-1)^2) ; 0];
+        if time(i) < (end_time-buffer_time)
+            xzdotdot_temp = [-a_s ; 0];
+            xzdot_temp = [V_start-a_s*time(i-1) ; 0];
+            xz_temp = [V_start*time(i-1)-(1/2)*a_s*(time(i-1)^2) ; 0];
+        else
+            xzdotdot_temp = [0 ; 0];
+            xzdot_temp = [0 ; 0];
+            xz_temp = [V_start*(end_time-buffer_time) - 0.5*a_s*(end_time-buffer_time)^2 ; 0];
+        end
     elseif traj_type == "const_height"
         % Take the trajectory and read from there
         
         xzdotdot_temp = [xdotdot_des(i); 0];
         xzdot_temp = [xdot_des(i); 0];
         xz_temp = [x_des(i); 0];
-    elseif traj_type == "stepA" || traj_type == "stepP"
+    elseif traj_type == "stepA_hover" || traj_type == "stepP"
         xzdotdot_temp = [0 ; 0];
         xzdot_temp = [0 ; 0];
         xz_temp = [0 ; 0];
@@ -411,30 +451,30 @@ for i = 2:length(time)
     % Controller
     [T_top(i), T_bot(i), Fdes(:,i)] = qbit_controller(current_state, ...
         desired_state(:,i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1), m, ...
-        Iyy, l);
+        Ixx, l);
     
     if integrate_method == "euler"
         %%%%%%%%%%% Euler Integration
-%         xdotdot(i) = ((T_top(i) + T_bot(i))*cos(theta(i-1)) - D(i-1)*cos(theta(i-1) - alpha_e(i-1)) - L(i-1)*sin(theta(i-1) - alpha_e(i-1)))/m;
-%         zdotdot(i) = ( -m*g + (T_top(i) + T_bot(i))*sin(theta(i-1)) - D(i-1)*sin(theta(i-1) - alpha_e(i-1)) + L(i-1)*cos(theta(i-1) - alpha_e(i-1)))/m;
-%         thetadotdot(i) = (M_air(i-1) + l*(T_bot(i) - T_top(i)))/Iyy;
-%         
-%         % Euler integration
-%         xdot(i) = xdot(i-1) + xdotdot(i)*dt;
-%         zdot(i) = zdot(i-1) + zdotdot(i)*dt;
-%         thetadot(i) = thetadot(i-1) + thetadotdot(i)*dt;
-%         
-%         x(i) = x(i-1) + xdot(i)*dt;
-%         z(i) = z(i-1) + zdot(i)*dt;
-%         theta(i) = theta(i-1) + thetadot(i)*dt;
+        %         xdotdot(i) = ((T_top(i) + T_bot(i))*cos(theta(i-1)) - D(i-1)*cos(theta(i-1) - alpha_e(i-1)) - L(i-1)*sin(theta(i-1) - alpha_e(i-1)))/m;
+        %         zdotdot(i) = ( -m*g + (T_top(i) + T_bot(i))*sin(theta(i-1)) - D(i-1)*sin(theta(i-1) - alpha_e(i-1)) + L(i-1)*cos(theta(i-1) - alpha_e(i-1)))/m;
+        %         thetadotdot(i) = (M_air(i-1) + l*(T_bot(i) - T_top(i)))/Ixx;
+        %
+        %         % Euler integration
+        %         xdot(i) = xdot(i-1) + xdotdot(i)*dt;
+        %         zdot(i) = zdot(i-1) + zdotdot(i)*dt;
+        %         thetadot(i) = thetadot(i-1) + thetadotdot(i)*dt;
+        %
+        %         x(i) = x(i-1) + xdot(i)*dt;
+        %         z(i) = z(i-1) + zdot(i)*dt;
+        %         theta(i) = theta(i-1) + thetadot(i)*dt;
         
     elseif integrate_method == "rk4"
         %%%%%%%%%%% 4th-Order Runge Kutta:
         state = [x(i-1);z(i-1);theta(i-1);xdot(i-1);zdot(i-1);thetadot(i-1)];
-        k1 = dynamics(state, m, g, Iyy, l, T_top(i), T_bot(i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1));
-        k2 = dynamics(state+(dt/2)*k1, m, g, Iyy, l, T_top(i), T_bot(i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1));
-        k3 = dynamics(state+(dt/2)*k2, m, g, Iyy, l, T_top(i), T_bot(i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1));
-        k4 = dynamics(state+(dt)*k3, m, g, Iyy, l, T_top(i), T_bot(i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1));
+        k1 = dynamics(state, m, g, Ixx, l, T_top(i), T_bot(i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1));
+        k2 = dynamics(state+(dt/2)*k1, m, g, Ixx, l, T_top(i), T_bot(i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1));
+        k3 = dynamics(state+(dt/2)*k2, m, g, Ixx, l, T_top(i), T_bot(i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1));
+        k4 = dynamics(state+(dt)*k3, m, g, Ixx, l, T_top(i), T_bot(i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1));
         
         new_state = state + (dt/6)*(k1 + 2*k2 + 2*k3 + k4);
         x(i) = new_state(1);
@@ -728,7 +768,7 @@ hold on
 plot(a_v_Va(alpha_e ~= 0), alpha_e(alpha_e ~= 0)*180/pi, 'k-', 'linewidth', 2)
 if traj_type == "increasing" || traj_type == "decreasing"
     plot(trim_a_v_Va_shift, trim_alpha_e, 'g*', 'linewidth', 1.5)
-    title(strcat("Comparison with Trim Data, acc = ",num2str(a_s),"-m/s^2"))
+    title(strcat("Comparison with Trim Data, acc = ",num2str(a_s),"-$m/s^2$"),'interpreter','latex')
     legend("Trim Condition", "Simulation", "Acceleration-Shifted")
 end
 xlabel("$a_{v}$",'interpreter','latex')
@@ -753,11 +793,11 @@ if traj_type == "trim"
 end
 
 %% Dynamics Function
-function xdot = dynamics(x, m, g, Iyy, l, T_top, T_bot, L, D, M_air, alpha_e)
+function xdot = dynamics(x, m, g, Ixx, l, T_top, T_bot, L, D, M_air, alpha_e)
 % INPUTS
 % t - current time (time(i))
 % x - current state , x = [6x1] = [x, z, theta, xdot, zdot, thetadot]
-% m, g, Iyy, l - physical parameters of mass, gravity, inertia, prop arm
+% m, g, Ixx, l - physical parameters of mass, gravity, inertia, prop arm
 % length
 % T_top, T_bot - motor thrust inputs
 % L, D, M_air - aero forces and moments, computed prior
@@ -770,6 +810,6 @@ xdot(2) = x(5);
 xdot(3) = x(6);
 xdot(4) = ((T_top + T_bot)*cos(x(3)) - D*cos(x(3) - alpha_e) - L*sin(x(3) - alpha_e))/m;
 xdot(5) = ( -m*g + (T_top + T_bot)*sin(x(3)) - D*sin(x(3) - alpha_e) + L*cos(x(3) - alpha_e))/m;
-xdot(6) = (M_air + l*(T_bot - T_top))/Iyy;
+xdot(6) = (M_air + l*(T_bot - T_top))/Ixx;
 
 end

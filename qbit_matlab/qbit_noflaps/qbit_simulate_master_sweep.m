@@ -23,7 +23,7 @@ rho = 1.2;
 % m_battery = 0.150;
 % m = m_airframe + m_battery;
 % 
-% Iyy = 2.32e-3;
+% Ixx = 2.32e-3;
 % span = 15*in2m;
 % l = 6*in2m;
 % chord = 5*in2m;
@@ -38,7 +38,7 @@ R = 4.5*in2m;   % Estimated 9in prop
 
 scaling_factor = span/(15*in2m);
 m = (0.3650)*(scaling_factor^3);  % Mass scales with R^3
-Iyy = (2.32e-3)*(scaling_factor^5);
+Ixx = (2.32e-3)*(scaling_factor^5);
 
 %% Generate Airfoil Look-up
 % This look up table data will be used to estimate lift, drag, moment given
@@ -208,11 +208,11 @@ for i = 2:length(time)
    
     [T_top(i), T_bot(i), Fdes(:,i)] = qbit_controller(current_state, ...
         desired_state(:,i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1), m, ...
-        Iyy, l);
+        Ixx, l);
     
     xdotdot(i) = ((T_top(i) + T_bot(i))*cos(theta(i-1)) - D(i-1)*cos(theta(i-1) - alpha_e(i-1)) - L(i-1)*sin(theta(i-1) - alpha_e(i-1)))/m;
     zdotdot(i) = ( -m*g + (T_top(i) + T_bot(i))*sin(theta(i-1)) - D(i-1)*sin(theta(i-1) - alpha_e(i-1)) + L(i-1)*cos(theta(i-1) - alpha_e(i-1)))/m;
-    thetadotdot(i) = (M_air(i-1) + l*(T_bot(i) - T_top(i)))/Iyy;
+    thetadotdot(i) = (M_air(i-1) + l*(T_bot(i) - T_top(i)))/Ixx;
     
     % Euler integration
     xdot(i) = xdot(i-1) + xdotdot(i)*dt;

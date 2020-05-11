@@ -87,7 +87,7 @@ R = 4.5*in2m;   % Estimated 9in prop
 
 scaling_factor = span/(15*in2m);
 m = (0.3650)*(scaling_factor^3);  % Mass scales with R^3
-Iyy = (2.32e-3)*(scaling_factor^5);
+Ixx = (2.32e-3)*(scaling_factor^5);
 
 eta = 1;
 V_s = 30;

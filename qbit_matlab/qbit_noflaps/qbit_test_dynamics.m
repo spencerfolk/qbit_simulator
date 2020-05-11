@@ -20,7 +20,7 @@ eta = 0.0;   % Efficiency of the down wash on the wings from the propellers;
 
 scaling_factor = span/(15*in2m);
 m = (0.3650)*(scaling_factor^3);  % Mass scales with R^3
-Iyy = (2.32e-3)*(scaling_factor^5);
+Ixx = (2.32e-3)*(scaling_factor^5);
 
 %% Generate Airfoil Look-up
 % This look up table data will be used to estimate lift, drag, moment given
@@ -66,7 +66,7 @@ for i = 2:length(time)
     q0 = [Vi(i-1) gamma(i-1) theta(i-1) thetadot(i-1) x(i-1) z(i-1)]';
     u = [T_top(i) T_bot(i)]';
     
-    qdot(:,i) = qbit_longitudinal_dynamics(q0,u,m,g,Iyy,l,eta,rho,R,chord,span,cl_spline,cd_spline,cm_spline);
+    qdot(:,i) = qbit_longitudinal_dynamics(q0,u,m,g,Ixx,l,eta,rho,R,chord,span,cl_spline,cd_spline,cm_spline);
     
     Vidot = qdot(1,i);
     gammadot = qdot(2,i);

@@ -3,7 +3,7 @@
 %%% Notably, this particular controller iterates to converge on a T_top and
 %%% T_bot that properly anticipates lift and drag at the new state
 %%% Spencer Folk 2020
-function [T_top, T_bot, Fdes] = qbit_iter_controller(current_state, desired_state, L, D, M_air, alpha_e, m, Iyy, l)
+function [T_top, T_bot, Fdes] = qbit_iter_controller(current_state, desired_state, L, D, M_air, alpha_e, m, Ixx, l)
 
 % INPUTS -
 % current_state = [x z theta xdot zdot thetadot]'
@@ -13,7 +13,7 @@ function [T_top, T_bot, Fdes] = qbit_iter_controller(current_state, desired_stat
 % M_air - current pitch moment
 % alpha_e - current effective angle of attack
 % m - vehicle mass
-% Iyy - vehicle inertia about y axis
+% Ixx - vehicle inertia about y axis
 % l - distance between each rotor
 
 in2m = 0.0254;
@@ -89,7 +89,7 @@ theta_des = atan2(b1_des(2),b1_des(1));
 e_theta = -atan2(b1(1)*b1_des(2) - b1(2)*b1_des(1), b1(1)*b1_des(1) + b1(2)*b1_des(2));
 
 % Compute u2:
-u2 = Iyy*(-K_R*e_theta - K_w*thetadot) - M_air;
+u2 = Ixx*(-K_R*e_theta - K_w*thetadot) - M_air;
 
 T = inv([1 , 1 ; -l , l])*[u1 ; u2];
 
@@ -148,7 +148,7 @@ if aero == true
         e_theta = -atan2(b1(1)*b1_des(2) - b1(2)*b1_des(1), b1(1)*b1_des(1) + b1(2)*b1_des(2));
         
         % Compute u2:
-        u2 = Iyy*(-K_R*e_theta - K_w*thetadot) - M_air_new;
+        u2 = Ixx*(-K_R*e_theta - K_w*thetadot) - M_air_new;
         
         T = inv([1 , 1 ; -l , l])*[u1 ; u2];
         
