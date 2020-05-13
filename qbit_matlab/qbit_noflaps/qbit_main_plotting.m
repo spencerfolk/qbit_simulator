@@ -7,7 +7,7 @@
 
 if animate == true
     h = figure();
-    qbit_animate_trajectory(h, time,[x ; z ; theta], desired_state(1,:), desired_state(2,:),Fdes,l, save_animation)
+    qbit_animate_trajectory(h, time,[y ; z ; theta], desired_state(1,:), desired_state(2,:),Fdes,l, save_animation)
     
     if traj_type == "cubic"
         hold on
@@ -23,10 +23,10 @@ figure()
 sgtitle("States",'interpreter','latex')
 
 subplot(3,1,1)
-plot(time, x, 'r-','linewidth',1.5)
+plot(time, y, 'r-','linewidth',1.5)
 hold on
 plot(time, desired_state(1,:), 'k--', 'linewidth',1)
-ylabel('x [m]','interpreter','latex')
+ylabel('y [m]','interpreter','latex')
 xlim([0,time(end)])
 grid on
 
@@ -51,10 +51,10 @@ figure()
 sgtitle("State Derivatives",'interpreter','latex')
 
 subplot(3,1,1)
-plot(time, xdot, 'r-','linewidth',1.5)
+plot(time, ydot, 'r-','linewidth',1.5)
 hold on
 plot(time, desired_state(3,:), 'k--', 'linewidth',1)
-ylabel('$\dot{x}$ [m/s]','interpreter','latex')
+ylabel('$\dot{y}$ [m/s]','interpreter','latex')
 xlim([0,time(end)])
 grid on
 
@@ -77,10 +77,10 @@ figure()
 sgtitle("Body Acceleration",'interpreter','latex')
 
 subplot(2,1,1)
-plot(time,xdotdot,'r-','linewidth',1.5)
+plot(time,ydotdot,'r-','linewidth',1.5)
 hold on
 plot(time,desired_state(5,:),'k--','linewidth',1.5)
-ylabel("$\ddot{x}$ [$m/s^2$]",'interpreter','latex')
+ylabel("$\ddot{y}$ [$m/s^2$]",'interpreter','latex')
 xlim([0,time(end)]);
 legend("Actual", "Desired")
 grid on
@@ -209,7 +209,7 @@ end
 plot(time, normFdes, 'k--','linewidth',1.5)
 xlabel("Time [s]",'interpreter','latex')
 ylabel("Force [N]",'interpreter','latex')
-legend("F_x","F_z","||F^{net}||")
+legend("F_y","F_z","||F^{net}||")
 % title("Thrust Vector from Controller")
 grid on
 

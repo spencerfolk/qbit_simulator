@@ -11,7 +11,7 @@ function [T_top, T_bot, Fdes] = qbit_controller(current_state, desired_state, L,
 % M_air - current pitch moment
 % alpha_e - current effective angle of attack
 % m - vehicle mass
-% Ixx - vehicle inertia about y axis
+% Ixx - vehicle inertia about x axis
 % l - distance between each rotor
 
 %% Gains and constants
@@ -33,19 +33,19 @@ motor_sat_bool = false;  % If motor thrust goes above saturation limit, this wil
 
 
 %% Extract current and trajectory states for a given time
-x = current_state(1);
+y = current_state(1);
 z = current_state(2);
 theta = current_state(3);
-xdot = current_state(4);
+ydot = current_state(4);
 zdot = current_state(5);
 thetadot = current_state(6);
 
 rT = desired_state;  % Put function here trajectory(current_time)
-xT = rT(1);
+yT = rT(1);
 zT = rT(2);
-xdotT = rT(3);
+ydotT = rT(3);
 zdotT = rT(4);
-xdotdotT = rT(5);
+ydotdotT = rT(5);
 zdotdotT = rT(6);
 
 %% Construct rotation matrices
@@ -55,7 +55,7 @@ iRe = [cos(theta - alpha_e) , -sin(theta - alpha_e) ; sin(theta - alpha_e) , cos
 %% Computing u1
 
 % Compute desired accelerations
-rdotdot_des = [xdotdotT ; zdotdotT] - K_d*[xdot - xdotT ; zdot - zdotT] - K_p*[x - xT ; z - zT];
+rdotdot_des = [ydotdotT ; zdotdotT] - K_d*[ydot - ydotT ; zdot - zdotT] - K_p*[y - yT ; z - zT];
 
 % Now compute Fdes
 if aero == true

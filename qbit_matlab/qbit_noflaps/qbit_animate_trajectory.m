@@ -2,13 +2,13 @@
 %%% The bulk of this code was written by Mathew Halm for purposes of
 %%% plotting a quadrotor in MEAM 517. It was adapted for use in plotting
 %%% the planar qbit.
-function qbit_animate_trajectory(h, t, x_vec, x_d, z_d, Fdes, l, save)
+function qbit_animate_trajectory(h, t, x_vec, y_d, z_d, Fdes, l, save)
 % INPUTS
 % h - FIGURE OBJECT
 % t - [1xn] time vector
-% x - [Mxn] state vector where M = 3 => x, z, theta
-% x_d - [1xn] x desired position at time t
-% z_d - [1xn] x desired position at time t
+% x - [Mxn] state vector where M = 3 => y, z, theta
+% y_d - [1xn] y desired position at time t
+% z_d - [1xn] z desired position at time t
 % Fdes - [2xn] desired force vector
 % l - [1x1] length between rotors (arm length is l/2)
 % save - boolean to determine whether we should save the gif (true) or not
@@ -17,7 +17,7 @@ function qbit_animate_trajectory(h, t, x_vec, x_d, z_d, Fdes, l, save)
 a = l*2;
 
 dt = t(2) - t(1);
-x = x_vec(1,:);
+y = x_vec(1,:);
 z = x_vec(2,:);
 theta = x_vec(3,:) - pi/2;
 stale = .01;
@@ -29,38 +29,38 @@ filename = 'testAnimated.gif';
 while i<=numel(t)
     start = toc;
     hold off;
-    plot(x_d, z_d, 'k:','LineWidth',2);
+    plot(y_d, z_d, 'k:','LineWidth',2);
     grid on
     hold on;
     
     
     % Plot path
-    plot(x(1:i), z(1:i), 'r','LineWidth',2);
+    plot(y(1:i), z(1:i), 'r','LineWidth',2);
     
     % Plot the vehicle
-%         plot([x(i) + a*cos(theta(i)), x(i) - a*cos(theta(i))],...
+%         plot([y(i) + a*cos(theta(i)), y(i) - a*cos(theta(i))],...
 %              [z(i) + a*sin(theta(i)), z(i) - a*sin(theta(i))] , 'b','LineWidth',6);
-    body = plot_vehicle(x(i),z(i),theta(i),l);
+    body = plot_vehicle(y(i),z(i),theta(i),l);
     
     plot(body,'FaceColor','blue')
     
     % Plot the force vector
-    quiver(x(i),z(i),5*Fdes(1,i)/norm(Fdes(:,i)),5*Fdes(2,i)/norm(Fdes(:,i)),'m-','linewidth',2)
+    quiver(y(i),z(i),5*Fdes(1,i)/norm(Fdes(:,i)),5*Fdes(2,i)/norm(Fdes(:,i)),'m-','linewidth',2)
     
     % Plot body orientation
-%     quiver(x(i),z(i), cos(theta(i))*2, sin(theta(i))*2,'b-','linewidth',2)
+%     quiver(y(i),z(i), cos(theta(i))*2, sin(theta(i))*2,'b-','linewidth',2)
     
     B = 1.5;
-    %     xlim([min(x_d) - B, max(x_d) + B]);
+    %     xlim([min(y_d) - B, max(y_d) + B]);
     %     ylim([min(z_d) - B, max(z_d) + B]);
     
-    xlim([x(i)-10,x(i)+10])
+    xlim([y(i)-10,y(i)+10])
     ylim([z(i)-10,z(i)+10])
     
     %     axis equal
     
-    xlabel('x');
-    ylabel('z');
+    xlabel('y [m]');
+    ylabel('z [m]');
     titl = sprintf('QBiT Trajectory, $t =  %.2f $',t(i));
     title(titl,'Interpreter','latex');
     

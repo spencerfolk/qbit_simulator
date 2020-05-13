@@ -56,7 +56,7 @@ if traj_type == "cubic"
     
     [traj_obj, end_time] = qbit_spline_generator(waypoints, V_s);
     
-    % Use this traj_obj to get our desired x,z at a given time t
+    % Use this traj_obj to get our desired y,z at a given time t
     traj_obj_dot = fnder(traj_obj,1);
     traj_obj_dotdot = fnder(traj_obj,2);
     
@@ -85,15 +85,15 @@ t_f = end_time+3;
 time = 0:dt:t_f;
 
 % States
-x = zeros(size(time));
+y = zeros(size(time));
 z = zeros(size(time));
 theta = zeros(size(time));
 
-xdot = zeros(size(time));
+ydot = zeros(size(time));
 zdot = zeros(size(time));
 thetadot = zeros(size(time));
 
-xdotdot = zeros(size(time));
+ydotdot = zeros(size(time));
 zdotdot = zeros(size(time));
 thetadotdot = zeros(size(time));
 
@@ -123,53 +123,53 @@ Pbot = zeros(size(time));
 
 % Initial conditions:
 theta(1) = init_conds(3);
-x(1) = 0;
+y(1) = 0;
 z(1) = 0;
 if traj_type == "cubic"
-    xdot(1) = 0;
+    ydot(1) = 0;
 elseif traj_type == "trim"
-    xdot(1) = V_s;
+    ydot(1) = V_s;
 end
 zdot(1) = 0;
 
 % Trajectory state
-desired_state = zeros(6,length(time));  % [x, z, xdot, zdot, xdotdot, zdotdot]
-desired_state(:,1) = [x(1);z(1);xdot(1);zdot(1);xdotdot(1);zdotdot(1)];
+desired_state = zeros(6,length(time));  % [y, z, ydot, zdot, ydotdot, zdotdot]
+desired_state(:,1) = [y(1);z(1);ydot(1);zdot(1);ydotdot(1);zdotdot(1)];
 
 %% Main Simulation
 
 for i = 2:length(time)
     
     % Retrieve the command thrust from desired trajectory
-    current_state = [x(i-1), z(i-1), theta(i-1), xdot(i-1), zdot(i-1), thetadot(i-1)];
+    current_state = [y(i-1), z(i-1), theta(i-1), ydot(i-1), zdot(i-1), thetadot(i-1)];
     current_time = time(i);
     
     % Get our desired state at time(i)
     
     if traj_type == "cubic"
         if time(i) < end_time
-            xz_temp = ppval(traj_obj,time(i));
-            xzdot_temp = ppval(traj_obj_dot,time(i));
-            xzdotdot_temp = ppval(traj_obj_dotdot,time(i));
+            yz_temp = ppval(traj_obj,time(i));
+            yzdot_temp = ppval(traj_obj_dot,time(i));
+            yzdotdot_temp = ppval(traj_obj_dotdot,time(i));
         else
-            xz_temp = waypoints(:,end);
-            xzdot_temp = [0;0];
-            xzdotdot_temp = [0;0];
+            yz_temp = waypoints(:,end);
+            yzdot_temp = [0;0];
+            yzdotdot_temp = [0;0];
         end
     elseif traj_type == "trim"
-        xzdotdot_temp = [0 ; 0];
-        xzdot_temp = [V_s ; 0];
-        xz_temp = [V_s*time(i-1) ; 0];
+        yzdotdot_temp = [0 ; 0];
+        yzdot_temp = [V_s ; 0];
+        yz_temp = [V_s*time(i-1) ; 0];
     end
     
-    desired_state(:,i) = [xz_temp' , xzdot_temp' , xzdotdot_temp']; % 6x1
+    desired_state(:,i) = [yz_temp' , yzdot_temp' , yzdotdot_temp']; % 6x1
     
     % Find the current airspeed and prop wash speed
-    Vi(i-1) = sqrt( xdot(i-1)^2 + zdot(i-1)^2 );
+    Vi(i-1) = sqrt( ydot(i-1)^2 + zdot(i-1)^2 );
     
     % Compute orientations
     if abs(Vi(i-1)) >= 1e-5
-        gamma(i-1) = atan2(zdot(i-1), xdot(i-1));  % Inertial orientation
+        gamma(i-1) = atan2(zdot(i-1), ydot(i-1));  % Inertial orientation
     else
         gamma(i-1) = 0;
     end
@@ -210,16 +210,16 @@ for i = 2:length(time)
         desired_state(:,i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1), m, ...
         Ixx, l);
     
-    xdotdot(i) = ((T_top(i) + T_bot(i))*cos(theta(i-1)) - D(i-1)*cos(theta(i-1) - alpha_e(i-1)) - L(i-1)*sin(theta(i-1) - alpha_e(i-1)))/m;
+    ydotdot(i) = ((T_top(i) + T_bot(i))*cos(theta(i-1)) - D(i-1)*cos(theta(i-1) - alpha_e(i-1)) - L(i-1)*sin(theta(i-1) - alpha_e(i-1)))/m;
     zdotdot(i) = ( -m*g + (T_top(i) + T_bot(i))*sin(theta(i-1)) - D(i-1)*sin(theta(i-1) - alpha_e(i-1)) + L(i-1)*cos(theta(i-1) - alpha_e(i-1)))/m;
     thetadotdot(i) = (M_air(i-1) + l*(T_bot(i) - T_top(i)))/Ixx;
     
     % Euler integration
-    xdot(i) = xdot(i-1) + xdotdot(i)*dt;
+    ydot(i) = ydot(i-1) + ydotdot(i)*dt;
     zdot(i) = zdot(i-1) + zdotdot(i)*dt;
     thetadot(i) = thetadot(i-1) + thetadotdot(i)*dt;
     
-    x(i) = x(i-1) + xdot(i)*dt;
+    y(i) = y(i-1) + ydot(i)*dt;
     z(i) = z(i-1) + zdot(i)*dt;
     theta(i) = theta(i-1) + thetadot(i)*dt;
     
@@ -248,7 +248,7 @@ Fdes(:,1) = Fdes(:,2);
 
 if animate == true
     h = figure();
-    qbit_animate_trajectory(h, time,[x ; z ; theta], desired_state(1,:), desired_state(2,:),Fdes,l, save_animation)
+    qbit_animate_trajectory(h, time,[y ; z ; theta], desired_state(1,:), desired_state(2,:),Fdes,l, save_animation)
     hold on
     plot(waypoints(1,:),waypoints(2,:),'ko','linewidth',2)
     axis equal

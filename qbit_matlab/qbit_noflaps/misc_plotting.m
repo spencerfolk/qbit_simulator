@@ -1,9 +1,9 @@
 figure()
 sgtitle("Forward Airspeed vs Time",'interpreter','latex')
-% plot(time, xdot, 'r-','linewidth',1.5)
+% plot(time, ydot, 'r-','linewidth',1.5)
 % hold on
 plot(time, desired_state(3,:), 'k--', 'linewidth',1)
-ylabel('$\dot{x}$ [m/s]','interpreter','latex')
+ylabel('$\dot{y}$ [m/s]','interpreter','latex')
 xlabel('Time [s]','interpreter','latex')
 xlim([0,time(end)])
 % legend("Actual","Desired")
@@ -24,10 +24,10 @@ grid on
 
 figure()
 sgtitle("Forward Acceleration vs Time",'interpreter','latex')
-plot(time,xdotdot,'r-','linewidth',1.5)
+plot(time,ydotdot,'r-','linewidth',1.5)
 hold on
 plot(time,desired_state(5,:),'k--','linewidth',1.5)
-ylabel("$\ddot{x}$ [$m/s^2$]",'interpreter','latex')
+ylabel("$\ddot{y}$ [$m/s^2$]",'interpreter','latex')
 xlim([0,time(end)]);
 xlabel('Time [s]','interpreter','latex')
 legend("Actual", "Desired")
@@ -71,22 +71,23 @@ else
     sgtitle("Horizontal Transition: Constant Acceleration",'interpreter','latex')
 end
 subplot(3,1,1)
-plot(time, desired_state(1,:), 'k--', 'linewidth',1.5)
+plot(time, desired_state(1,:), 'k-', 'linewidth',1.5)
 hold on
-ylabel('x [m]','interpreter','latex')
+ylabel('y [m]','interpreter','latex')
 xlim([0,time(end)])
 grid on
 
 subplot(3,1,2)
-plot(time, desired_state(3,:), 'k--', 'linewidth',1.5)
-ylabel('$\dot{x}$ [m/s]','interpreter','latex')
+plot(time, desired_state(3,:), 'k-', 'linewidth',1.5)
+ylabel('$\dot{y}$ [m/s]','interpreter','latex')
 xlim([0,time(end)])
 grid on
 
 subplot(3,1,3)
-plot(time,desired_state(5,:),'k--','linewidth',1.5)
-ylabel("$\ddot{x}$ [$m/s^2$]",'interpreter','latex')
+plot(time,desired_state(5,:),'k-','linewidth',1.5)
+ylabel("$\ddot{y}$ [$m/s^2$]",'interpreter','latex')
 xlim([0,time(end)]);
+ylim([0,2*max(desired_state(5,:))])
 grid on
 xlabel("Time [s]",'interpreter','latex')
 

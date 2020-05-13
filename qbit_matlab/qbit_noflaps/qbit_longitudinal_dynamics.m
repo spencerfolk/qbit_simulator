@@ -1,14 +1,14 @@
 function xdot = qbit_longitudinal_dynamics(x,u, m, g, Ixx, l, eta, rho, R, chord, span, cl_spline, cd_spline, cm_spline)
 %%% Dynamics for the qbit in the state space form.
 % Inputs --
-% x [4x1] - [Vi, gamma, theta, thetadot,  x, z] 
+% x [4x1] - [Vi, gamma, theta, thetadot,  y, z] 
 %            m/s , rad , rad , rad/s  m, m
 % u [2x1] - [T_top , T_bot]
 %             N  ,   N
 % cl, cd, cm splines - spline objects for getting cl, cd, cm
 
 % Outputs --
-% xdot [4x1] - [Vidot , gammadot, thetadot , thetadotdot, xdot, zdot]
+% xdot [4x1] - [Vidot , gammadot, thetadot , thetadotdot, ydot, zdot]
 
 %%% NOTE - the dynamics here are in longitudinal form (think path
 %%% coordinates). 
@@ -33,7 +33,7 @@ Vidot = ( (u(1)+u(2))*cos(x(3)-x(2)) - (1/2)*rho*chord*span*Va^2*(Cl*sin(x(3)-x(
 gammadot = ( (u(1)+u(2))*sin(x(3)-x(2)) + (1/2)*rho*chord*span*Va^2*(Cl*cos(x(3)-x(2)-alpha_e) - Cd*sin(x(3)-x(2)-alpha_e)) - m*g*cos(x(2)) )/(m*x(1));
 thetadot = x(4);
 thetadotdot = ((1/2)*rho*chord*span*Va^2*Cm*chord + l*(u(2)-u(1)))/Ixx;
-xdot = x(1)*cos(x(2));
+ydot = x(1)*cos(x(2));
 zdot = x(1)*sin(x(2));
 
 % Note that the dynamics at hover have to be accounted for... 
@@ -41,5 +41,5 @@ if x(1) <= 1e-2
    gammadot = thetadotdot;
 end
 
-xdot = [Vidot gammadot thetadot thetadotdot, xdot, zdot]';
+xdot = [Vidot gammadot thetadot thetadotdot, ydot, zdot]';
 end

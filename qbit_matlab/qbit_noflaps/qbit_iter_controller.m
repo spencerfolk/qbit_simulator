@@ -1,12 +1,12 @@
 %%% This function will output thrust commands based on a nonlinear
-%%% geometric controller that tracks orientation [theta] and position [x,z].
+%%% geometric controller that tracks orientation [theta] and position [y,z].
 %%% Notably, this particular controller iterates to converge on a T_top and
 %%% T_bot that properly anticipates lift and drag at the new state
 %%% Spencer Folk 2020
 function [T_top, T_bot, Fdes] = qbit_iter_controller(current_state, desired_state, L, D, M_air, alpha_e, m, Ixx, l)
 
 % INPUTS -
-% current_state = [x z theta xdot zdot thetadot]'
+% current_state = [y z theta ydot zdot thetadot]'
 % current_time - current time step (time(i))
 % L - current lift force
 % D - current drag force
@@ -47,19 +47,19 @@ motor_sat_bool = true;  % If motor thrust goes above saturation limit, this will
 
 
 %% Extract current and trajectory states for a given time
-x = current_state(1);
+y = current_state(1);
 z = current_state(2);
 theta = current_state(3);
-xdot = current_state(4);
+ydot = current_state(4);
 zdot = current_state(5);
 thetadot = current_state(6);
 
 rT = desired_state;
-xT = rT(1);
+yT = rT(1);
 zT = rT(2);
-xdotT = rT(3);
+ydotT = rT(3);
 zdotT = rT(4);
-xdotdotT = rT(5);
+ydotdotT = rT(5);
 zdotdotT = rT(6);
 
 %% Construct rotation matrices
@@ -69,7 +69,7 @@ iRe = [cos(theta - alpha_e) , -sin(theta - alpha_e) ; sin(theta - alpha_e) , cos
 %% First iteration
 
 % Compute u1
-rdotdot_des = [xdotdotT ; zdotdotT] - K_d*[xdot - xdotT ; zdot - zdotT] - K_p*[x - xT ; z - zT];
+rdotdot_des = [ydotdotT ; zdotdotT] - K_d*[ydot - ydotT ; zdot - zdotT] - K_p*[y - yT ; z - zT];
 
 if aero == true
     Fdes = m*rdotdot_des + [0 ; m*g] - iRe*[-D ; L];
@@ -113,8 +113,8 @@ if aero == true
         
         % Recompute airspeeds given new orientation (theta_des) and T_top, T_bot
         T_avg = 0.5*(T_top + T_bot);
-        Vi = sqrt(xdotT^2 + zdotT^2);
-        gamma = atan2(zdotT, xdotT);
+        Vi = sqrt(ydotT^2 + zdotT^2);
+        gamma = atan2(zdotT, ydotT);
         alpha = theta_des - gamma;
         Vw = sqrt( (Vi*cos(theta_des-gamma))^2 + (T_avg/(0.5*rho*pi*R^2)) );
         Va = sqrt( Vi^2 + Vw^2 + 2*Vi*Vw*cos(alpha) );

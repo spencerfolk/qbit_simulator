@@ -7,6 +7,7 @@ clear
 clc
 close all
 
+% Bools / Settings
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
 animate = false; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
@@ -41,36 +42,15 @@ end_time = 5;     % Duration of trajectory, this will be REWRITTEN by all but
 %                  "trim" and "step___" trajectories.
 
 step_angle = -pi/4; % the angular step used by stepA_hover (positive counter clockwise)
-step_x = -1;          % step in the x direction used by stepP
+step_y = -1;          % step in the x direction used by stepP
 step_z = -1;          % step in the z direction used by stepP
 step_V = -3;          % step in forward airspeed used by stepV
 
 buffer_time = 0;  % s, sim time AFTER transition maneuver theoretically ends
 %                   ... this is to capture settling of the controller
 
-% Ritz tailsitter
-% m = 0.150;
-% Ixx = 2.32e-3;
-% span = 15*in2m;
-% l = 6*in2m;
-% chord = 5*in2m;
-% R = 2.5*in2m;
-
-% UMD QBiT
-% m = 3.76;
-% Ixx = 2.32e-1;  % Estimated with scaling laws based on mass and chord
-% span = 1.02;
-% chord = 0.254;
-% l = 19*in2m;
-% R = 15/2*in2m;
-
-% UMD QBiT Refined (thrust from motors don't even balance the weight...)
-% m = 1.264;
-% Ixx = 2.32e-2;  % Estimated with scaling laws based on mass and chord
-% span = 1.02;
-% chord = 0.254;
-% l = 19*in2m;
-% R = 15/2*in2m;
+%% Vehicle Parameters
+% Load in physical parameters for the qbit
 
 % CRC 5in prop
 % m_airframe = 0.215;
@@ -117,7 +97,7 @@ if traj_type == "cubic"
     
     [traj_obj, end_time] = qbit_spline_generator(waypoints, V_s);
     
-    % Use this traj_obj to get our desired x,z at a given time t
+    % Use this traj_obj to get our desired y,z at a given time t
     traj_obj_dot = fnder(traj_obj,1);
     traj_obj_dotdot = fnder(traj_obj,2);
     
@@ -328,7 +308,7 @@ elseif traj_type == "stepA_FF"
     xdot(1) = V_s;
     theta(1) = init_conds(3) + step_angle;
 elseif traj_type == "stepP"
-    x(1) = step_x;
+    x(1) = step_y;
     z(1) = step_z;
 elseif traj_type == "stepA_hover"
     theta(1) = pi/2 + step_angle;
@@ -527,19 +507,6 @@ zdotdot(1) = zdotdot(2);
 
 a_v_Va = (1/2)*rho*(chord*span)*Va.^2/(m*g);
 
-%% Animation
-
-if animate == true
-    h = figure();
-    qbit_animate_trajectory(h, time,[x ; z ; theta], desired_state(1,:), desired_state(2,:),Fdes,l, save_animation)
-    
-    if traj_type == "cubic"
-        hold on
-        plot(waypoints(1,:),waypoints(2,:),'ko','linewidth',2)
-    end
-    axis equal
-end
-
 %% Trim Comparison
 % Take the data from the trim analysis for the particular flight condition
 % we're interested in (based on eta)
@@ -563,6 +530,8 @@ if traj_type == "increasing" || traj_type == "decreasing"
     trim_a_v_Va_shift = trim_a_v_Va - (a_s/g)./(trim_Cd + trim_Cl.*cot(trim_alpha_e*pi/180));
 end
 
+%% Plotting
+qbit_main_plotting()
 
 %% Dynamics Function
 function xdot = dynamics(x, m, g, Ixx, l, T_top, T_bot, L, D, M_air, alpha_e)
