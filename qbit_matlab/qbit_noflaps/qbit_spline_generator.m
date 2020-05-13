@@ -2,7 +2,7 @@
 %%% qbit to follow. Eventually this will be replaced by some form of
 %%% trajectory optimization.
 %%% Spencer Folk 2020
-function [traj, end_time] = qbit_trajectory_generator(waypoints, V_s)
+function [traj, end_time] = qbit_spline_generator(waypoints, V_s)
 % INPUTS
 % waypoints [2xM] system of waypoints to generate a trajectory through
 % V_s [1x1] desired average speed to travel between waypoints

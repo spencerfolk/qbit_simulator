@@ -54,7 +54,7 @@ end_time = 10;   % Duration of trajectory, this will be rewritten if cubic splin
 if traj_type == "cubic"
     waypoints = [0,40; 0,0];
     
-    [traj_obj, end_time] = qbit_trajectory_generator(waypoints, V_s);
+    [traj_obj, end_time] = qbit_spline_generator(waypoints, V_s);
     
     % Use this traj_obj to get our desired x,z at a given time t
     traj_obj_dot = fnder(traj_obj,1);
