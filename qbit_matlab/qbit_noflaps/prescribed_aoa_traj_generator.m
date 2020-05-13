@@ -2,7 +2,7 @@
 %%% For a constant height transition maneuver, based on a given time-
 %%% valued function of alpha_e.
 %%% Spencer Folk 2020
-function [y_des, ydot_des, ydotdot_des]=const_height_traj_generator(dt,time,alpha_e_des,cl_spline, cd_spline,rho,m,g,chord,span,accel_bool)
+function [y_des, ydot_des, ydotdot_des]=prescribed_aoa_traj_generator(dt,time,alpha_e_des,cl_spline, cd_spline,rho,m,g,chord,span,accel_bool)
 % INPUTS
 % dt - sampling rate
 % time - time vector corresponding to alpha_e_des
