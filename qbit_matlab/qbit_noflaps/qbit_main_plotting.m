@@ -159,7 +159,7 @@ grid on
 subplot(3,1,2)
 plot(time, alpha_e, 'k-','linewidth',1.5)
 hold on
-if traj_type == "const_height"
+if traj_type == "prescribed_aoa"
     plot(time, asin(Vi.*sin(alpha_des)./Va), 'k--', 'linewidth', 1.5)
     plot(time, ones(size(time))*stall_angle*pi/180, 'g--', 'linewidth', 1)
     legend("Actual","Desired","Stall")

@@ -28,7 +28,7 @@ Ixx = (2.32e-3)*(scaling_factor^5);
 [cl_spline, cd_spline, cm_spline] = aero_fns("naca_0015_experimental_Re-160000.csv");
 
 %% Arrays
-tf = 1;
+tf = 10;
 dt = 0.01;
 
 time = 0:dt:tf;

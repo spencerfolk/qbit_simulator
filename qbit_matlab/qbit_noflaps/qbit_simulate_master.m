@@ -12,12 +12,12 @@ aero = true;  % This bool determines whether or not we compute aerodynamic force
 animate = false; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
 integrate_method = "rk4";  % Type of integration - either 'euler' or 'rk4'
-traj_type = "increasing"; % Type of trajectory:
+traj_type = "prescribed_aoa"; % Type of trajectory:
 %                           "cubic",
 %                           "trim" (for steady state flight),
 %                           "increasing" (const acceleration)
 %                           "decreasing" (const decelleration)
-%                           "const_height" (constant height, continuous AoA)
+%                           "prescribed_aoa" (constant height, continuous AoA)
 %                           "stepP" (step response in position at hover)
 %                           "stepA_hover" (step response in angle at hover)
 %                           "stepV" (step response in airspeed at trim)
@@ -35,7 +35,7 @@ eta = 0.0;   % Efficiency of the down wash on the wings from the propellers
 linear_acc = 3;   % m/s^2, the acceleration/decelleration used in
 %                  "increasing" and "decreasing" trajectories
 angular_vel = 5;   % deg/s, the desired change in attitude used by the
-%                  "const_height" trajectory
+%                  "prescribed_aoa" trajectory
 V_s = 30;          % m/s, set velocity used in "increasing", "decreasing", and
 %                  "trim" trajectories...
 end_time = 5;     % Duration of trajectory, this will be REWRITTEN by all but
@@ -46,7 +46,7 @@ step_y = -1;          % step in the x direction used by stepP
 step_z = -1;          % step in the z direction used by stepP
 step_V = -3;          % step in forward airspeed used by stepV
 
-buffer_time = 0;  % s, sim time AFTER transition maneuver theoretically ends
+buffer_time = 4;  % s, sim time AFTER transition maneuver theoretically ends
 %                   ... this is to capture settling of the controller
 
 %% Vehicle Parameters
@@ -174,7 +174,7 @@ elseif traj_type == "decreasing"
     fprintf("\nTrajectory type: Linear Decreasing")
     fprintf("\n----------------------------------\n")
     
-elseif traj_type == "const_height"
+elseif traj_type == "prescribed_aoa"
     % If it's constant height, design a desired AoA function
     % return a corresponding v(t), a(t), y/z(t) from that.
     
@@ -207,7 +207,7 @@ elseif traj_type == "const_height"
     
     % Get temp trajectory variables and save them
     accel_bool = true;  % Consider acceleration when generating the trajectory
-    [y_des, ydot_des, ydotdot_des]=const_height_traj_generator(dt,time,alpha_des,cl_spline, cd_spline,rho,m,g,chord,span, accel_bool);
+    [y_des, ydot_des, ydotdot_des]=prescribed_aoa_traj_generator(dt,time,alpha_des,cl_spline, cd_spline,rho,m,g,chord,span, accel_bool);
     
     fprintf("\nTrajectory type: Continuous Constant Height")
     fprintf("\n-------------------------------------------\n")
@@ -363,12 +363,17 @@ for i = 2:length(time)
             yzdot_temp = [0 ; 0];
             yz_temp = [V_start*(end_time-buffer_time) - 0.5*a_s*(end_time-buffer_time)^2 ; 0];
         end
-    elseif traj_type == "const_height"
+    elseif traj_type == "prescribed_aoa"
         % Take the trajectory and read from there
-        
-        yzdotdot_temp = [ydotdot_des(i); 0];
-        yzdot_temp = [ydot_des(i); 0];
-        yz_temp = [y_des(i); 0];
+        if time(i) < (end_time-buffer_time)
+            yzdotdot_temp = [ydotdot_des(i); 0];
+            yzdot_temp = [ydot_des(i); 0];
+            yz_temp = [y_des(i); 0];
+        else
+            yzdotdot_temp = [0;0];
+            yzdot_temp = [V_s ; 0];
+            yz_temp = [y(i-1) + V_s*(time(i) - (end_time-buffer_time)) ; 0];
+        end
     elseif traj_type == "stepA_hover" || traj_type == "stepP"
         yzdotdot_temp = [0 ; 0];
         yzdot_temp = [0 ; 0];

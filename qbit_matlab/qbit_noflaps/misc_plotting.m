@@ -15,7 +15,7 @@ plot(time,theta*180/pi,'b-','linewidth',1.5)
 xlim([0,time(end)])
 xlabel('Time [s]','interpreter','latex')
 ylabel('$\theta$ [deg]','interpreter','latex')
-if traj_type == "const_height"
+if traj_type == "prescribed_aoa"
     hold on
     plot(time,alpha_des*180/pi,'k--','linewidth',1.5)
     legend("Actual","Desired")
@@ -65,7 +65,7 @@ grid on
 
 % States
 figure()
-if traj_type == "const_height"
+if traj_type == "prescribed_aoa"
     sgtitle("Horizontal Transition: Prescribed AoA",'interpreter','latex')
 else
     sgtitle("Horizontal Transition: Constant Acceleration",'interpreter','latex')
@@ -79,8 +79,12 @@ grid on
 
 subplot(3,1,2)
 plot(time, desired_state(3,:), 'k-', 'linewidth',1.5)
+hold on
+plot(time, ones(size(time))*V_s, 'r--', 'linewidth',1.5)
 ylabel('$\dot{y}$ [m/s]','interpreter','latex')
 xlim([0,time(end)])
+ylim([0,V_s+5])
+legend("Trajectory","Cruise Speed",'location','southeast')
 grid on
 
 subplot(3,1,3)
