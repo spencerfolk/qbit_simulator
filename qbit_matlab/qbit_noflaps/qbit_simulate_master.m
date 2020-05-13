@@ -7,6 +7,7 @@ clear
 clc
 close all
 
+% Bools / Settings
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
 animate = false; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
@@ -48,29 +49,8 @@ step_V = -3;          % step in forward airspeed used by stepV
 buffer_time = 0;  % s, sim time AFTER transition maneuver theoretically ends
 %                   ... this is to capture settling of the controller
 
-% Ritz tailsitter
-% m = 0.150;
-% Ixx = 2.32e-3;
-% span = 15*in2m;
-% l = 6*in2m;
-% chord = 5*in2m;
-% R = 2.5*in2m;
-
-% UMD QBiT
-% m = 3.76;
-% Ixx = 2.32e-1;  % Estimated with scaling laws based on mass and chord
-% span = 1.02;
-% chord = 0.254;
-% l = 19*in2m;
-% R = 15/2*in2m;
-
-% UMD QBiT Refined (thrust from motors don't even balance the weight...)
-% m = 1.264;
-% Ixx = 2.32e-2;  % Estimated with scaling laws based on mass and chord
-% span = 1.02;
-% chord = 0.254;
-% l = 19*in2m;
-% R = 15/2*in2m;
+%% Vehicle Parameters
+% Load in physical parameters for the qbit
 
 % CRC 5in prop
 % m_airframe = 0.215;
@@ -115,7 +95,7 @@ if traj_type == "cubic"
     % waypoints = [0,0 ; 0, -10];  % Drop
     % waypoints = [0,0 ; 0, 10];  % rise
     
-    [traj_obj, end_time] = qbit_trajectory_generator(waypoints, V_s);
+    [traj_obj, end_time] = qbit_spline_generator(waypoints, V_s);
     
     % Use this traj_obj to get our desired x,z at a given time t
     traj_obj_dot = fnder(traj_obj,1);
@@ -527,19 +507,6 @@ zdotdot(1) = zdotdot(2);
 
 a_v_Va = (1/2)*rho*(chord*span)*Va.^2/(m*g);
 
-%% Animation
-
-if animate == true
-    h = figure();
-    qbit_animate_trajectory(h, time,[x ; z ; theta], desired_state(1,:), desired_state(2,:),Fdes,l, save_animation)
-    
-    if traj_type == "cubic"
-        hold on
-        plot(waypoints(1,:),waypoints(2,:),'ko','linewidth',2)
-    end
-    axis equal
-end
-
 %% Trim Comparison
 % Take the data from the trim analysis for the particular flight condition
 % we're interested in (based on eta)
@@ -564,233 +531,7 @@ if traj_type == "increasing" || traj_type == "decreasing"
 end
 
 %% Plotting
-
-% States
-figure()
-sgtitle("States",'interpreter','latex')
-
-subplot(3,1,1)
-plot(time, x, 'r-','linewidth',1.5)
-hold on
-plot(time, desired_state(1,:), 'k--', 'linewidth',1)
-ylabel('x [m]','interpreter','latex')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,2)
-plot(time, z, 'k-','linewidth',1.5)
-hold on
-plot(time, desired_state(2,:), 'k--', 'linewidth',1)
-ylabel('z [m]','interpreter','latex')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,3)
-plot(time, theta, 'b-','linewidth',1.5)
-hold on
-plot(time, ones(size(time))*pi/2, 'k--', 'linewidth', 1)
-ylabel('$\theta$ [rad]','interpreter','latex')
-xlim([0,time(end)])
-xlabel("Time [s]",'interpreter','latex')
-grid on
-
-figure()
-sgtitle("State Derivatives",'interpreter','latex')
-
-subplot(3,1,1)
-plot(time, xdot, 'r-','linewidth',1.5)
-hold on
-plot(time, desired_state(3,:), 'k--', 'linewidth',1)
-ylabel('$\dot{x}$ [m/s]','interpreter','latex')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,2)
-plot(time, zdot, 'k-','linewidth',1.5)
-hold on
-plot(time, desired_state(4,:), 'k--', 'linewidth',1)
-ylabel('$\dot{z}$ [m/s]','interpreter','latex')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,3)
-plot(time, thetadot, 'b-','linewidth',1.5)
-ylabel('$\dot{\theta}$ [rad/s]','interpreter','latex')
-xlim([0,time(end)])
-xlabel("Time [s]",'interpreter','latex')
-grid on
-
-figure()
-sgtitle("Body Acceleration",'interpreter','latex')
-
-subplot(2,1,1)
-plot(time,xdotdot,'r-','linewidth',1.5)
-hold on
-plot(time,desired_state(5,:),'k--','linewidth',1.5)
-ylabel("$\ddot{x}$ [$m/s^2$]",'interpreter','latex')
-xlim([0,time(end)]);
-legend("Actual", "Desired")
-grid on
-
-subplot(2,1,2)
-plot(time,zdotdot,'k-','linewidth',1.5)
-hold on
-plot(time,desired_state(6,:),'k--','linewidth',1.5)
-ylabel("$\ddot{z}$ [$m/s^2$]",'interpreter','latex')
-xlim([0,time(end)]);
-legend("Actual", "Desired")
-xlabel("Time [s]",'interpreter','latex')
-grid on
-
-figure()
-sgtitle("Aero Forces/Moments",'interpreter','latex')
-
-subplot(3,1,1)
-plot(time, L, 'r-','linewidth',1.5)
-ylabel('Lift [N]','interpreter','latex')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,2)
-plot(time, D, 'k-','linewidth',1.5)
-ylabel('Drag [N]','interpreter','latex')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,3)
-plot(time, M_air, 'b-','linewidth',1.5)
-ylabel('$M_{air}$ [Nm]','interpreter','latex')
-xlim([0,time(end)])
-xlabel("Time [s]",'interpreter','latex')
-grid on
-
-figure()
-sgtitle("Airflow Over Wing",'interpreter','latex')
-
-subplot(3,1,1)
-plot(time, Va, 'r-','linewidth',1.5)
-ylabel('$V_a$ [m/s]','interpreter','latex')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,2)
-plot(time, Vi, 'k-','linewidth',1.5)
-ylabel('$V_i$ [m/s]','interpreter','latex')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,3)
-plot(time, Vw, 'b-','linewidth',1.5)
-hold on
-plot(time, Vw_top, 'k--', 'linewidth', 1.5)
-plot(time, Vw_bot, 'r--', 'linewidth', 1.5)
-ylabel('$V_w$ [m/s]','interpreter','latex')
-xlim([0,time(end)])
-xlabel("Time (s)")
-legend("Average","Top","Bottom")
-grid on
-
-figure()
-titl = strcat("Misc Angles, $\eta$ = ",num2str(eta));
-sgtitle(titl,'interpreter','latex')
-
-subplot(3,1,1)
-plot(time, alpha, 'r-','linewidth',1.5)
-hold on
-plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
-plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
-ylabel('$\alpha$ [rad]','interpreter','latex')
-xlim([0,time(end)])
-grid on
-
-subplot(3,1,2)
-plot(time, alpha_e, 'k-','linewidth',1.5)
-hold on
-if traj_type == "const_height"
-    plot(time, asin(Vi.*sin(alpha_des)./Va), 'k--', 'linewidth', 1.5)
-    plot(time, ones(size(time))*stall_angle*pi/180, 'g--', 'linewidth', 1)
-    legend("Actual","Desired","Stall")
-end
-% plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
-% plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
-ylabel('$\alpha_e$ [rad]','interpreter','latex')
-xlim([0,time(end)])
-grid on
-% maxi = find(alpha_e == max(alpha_e));
-% plot(time(maxi),alpha_e(maxi),'ro','linewidth',2)
-% text(end_time/2,-1,strcat("(\alpha_e)_{SS} = ",num2str(mean(alpha_e((end-100):end))),"-rad"))
-
-subplot(3,1,3)
-plot(time, gamma, 'b-','linewidth',1.5)
-hold on
-plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
-plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
-ylabel('$\gamma$ [rad]','interpreter','latex')
-xlim([0,time(end)])
-% xlim([0,18])
-xlabel("Time [s]",'interpreter','latex')
-grid on
-
-figure()
-sgtitle("Thrust Commands",'interpreter','latex')
-
-plot(time, T_top, 'k-', 'linewidth', 1.5)
-hold on
-plot(time, T_bot, 'r-', 'linewidth', 1.5)
-plot(time, 0.5*(T_top + T_bot), 'g-', 'linewidth', 1.5)
-xlim([0,time(end)])
-xlabel("Time [s]",'interpreter','latex')
-ylabel("Thrust [N]",'interpreter','latex')
-legend("T_{top}", "T_{bot}", "T_{avg}")
-grid on
-
-figure()
-sgtitle("Desired Thrust Vector",'interpreter','latex')
-plot(time, Fdes(1,:),'-','linewidth',1.5)
-hold on
-plot(time, Fdes(2,:),'-','linewidth',1.5)
-normFdes = zeros(size(time));
-for i = 1:length(time)
-    normFdes(i) = norm(Fdes(:,i));
-end
-plot(time, normFdes, 'k--','linewidth',1.5)
-xlabel("Time [s]",'interpreter','latex')
-ylabel("Force [N]",'interpreter','latex')
-legend("F_x","F_z","||F^{net}||")
-% title("Thrust Vector from Controller")
-grid on
-
-% Comparison with Trim Data
-
-figure()
-plot(trim_a_v_Va, trim_alpha_e, 'ro', 'linewidth', 1.5)
-hold on
-plot(a_v_Va(alpha_e ~= 0), alpha_e(alpha_e ~= 0)*180/pi, 'k-', 'linewidth', 2)
-if traj_type == "increasing" || traj_type == "decreasing"
-    plot(trim_a_v_Va_shift, trim_alpha_e, 'g*', 'linewidth', 1.5)
-    title(strcat("Comparison with Trim Data, acc = ",num2str(a_s),"-$m/s^2$"),'interpreter','latex')
-    legend("Trim Condition", "Simulation", "Acceleration-Shifted")
-end
-xlabel("$a_{v}$",'interpreter','latex')
-ylabel("$\alpha_e$ [deg]",'interpreter','latex')
-grid on
-xlim([0,max(trim_a_v_Va)])
-% text(3.1,66,strcat("\eta = ",num2str(eta)))
-
-%% MISC Printouts
-if traj_type == "trim"
-    fprintf("\nData points of interest: \n")
-    fprintf("T_top = %3.4f\n",T_top(end))
-    fprintf("T_bot = %3.4f\n",T_bot(end))
-    fprintf("theta = %3.4f\n",theta(end))
-    fprintf("alpha = %3.4f\n",mean(alpha))
-    fprintf("alpha_e = %3.4f\n",mean(alpha_e))
-    fprintf("V_w = %3.4f\n",mean(Vw))
-    fprintf("V_a = %3.4f\n",mean(Va))
-    fprintf("L = %3.4f\n",mean(L))
-    fprintf("D = %3.4f\n",mean(D))
-    fprintf("M_air = %3.4f\n",mean(M_air))
-end
+qbit_main_plotting()
 
 %% Dynamics Function
 function xdot = dynamics(x, m, g, Ixx, l, T_top, T_bot, L, D, M_air, alpha_e)
