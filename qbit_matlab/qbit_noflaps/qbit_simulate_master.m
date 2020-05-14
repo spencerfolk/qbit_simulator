@@ -34,7 +34,7 @@ eta = 0.0;   % Efficiency of the down wash on the wings from the propellers
 
 linear_acc = 3;   % m/s^2, the acceleration/decelleration used in
 %                  "increasing" and "decreasing" trajectories
-angular_vel = 5;   % deg/s, the desired change in attitude used by the
+angular_vel = -5;   % deg/s, the desired change in attitude used by the
 %                  "prescribed_aoa" trajectory
 V_s = 30;          % m/s, set velocity used in "increasing", "decreasing", and
 %                  "trim" trajectories...
@@ -46,7 +46,7 @@ step_y = -1;          % step in the x direction used by stepP
 step_z = -1;          % step in the z direction used by stepP
 step_V = -3;          % step in forward airspeed used by stepV
 
-buffer_time = 4;  % s, sim time AFTER transition maneuver theoretically ends
+buffer_time = 0;  % s, sim time AFTER transition maneuver theoretically ends
 %                   ... this is to capture settling of the controller
 
 %% Vehicle Parameters
@@ -193,13 +193,15 @@ elseif traj_type == "prescribed_aoa"
     alpha_traj_type = "linear";
     aoa_rate = angular_vel*(pi/180);  % Rate of change of AoA, first number in degrees
     if alpha_traj_type == "linear"
-        end_time = abs(alpha_f - alpha_i)/aoa_rate;
-        time = 0:dt:end_time;
+        end_time = abs(alpha_f - alpha_i)/abs(aoa_rate) + buffer_time;
+        tf = end_time;
+        time = 0:dt:tf;
         
-        alpha_des = alpha_i - aoa_rate*time;
+        alpha_des = alpha_i + aoa_rate*time;
     elseif alpha_traj_type == "parabolic"
         end_time = 30;  % s
-        time = 0:dt:end_time;
+        tf = end_time;
+        time = 0:dt:t_f;
         
         alpha_des = alpha_i + ((alpha_f-alpha_i)/end_time^2)*time.^2;
         
@@ -364,7 +366,7 @@ for i = 2:length(time)
             yz_temp = [V_start*(end_time-buffer_time) - 0.5*a_s*(end_time-buffer_time)^2 ; 0];
         end
     elseif traj_type == "prescribed_aoa"
-        % Take the trajectory and read from there
+        % Take the trajectory generation section and read from there
         if time(i) < (end_time-buffer_time)
             yzdotdot_temp = [ydotdot_des(i); 0];
             yzdot_temp = [ydot_des(i); 0];
