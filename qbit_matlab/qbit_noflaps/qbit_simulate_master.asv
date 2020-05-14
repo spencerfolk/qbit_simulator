@@ -12,7 +12,7 @@ aero = true;  % This bool determines whether or not we compute aerodynamic force
 animate = false; % Bool for making an animation of the vehicle.
 save_animation = false; % Bool for saving the animation as a gif
 integrate_method = "rk4";  % Type of integration - either 'euler' or 'rk4'
-traj_type = "prescribed_aoa"; % Type of trajectory:
+traj_type = "increasing"; % Type of trajectory:
 %                           "cubic",
 %                           "trim" (for steady state flight),
 %                           "increasing" (const acceleration)
@@ -72,7 +72,7 @@ R = 4.5*in2m;   % Estimated 9in prop
 
 scaling_factor = span/(15*in2m);
 % m = (0.3650)*(scaling_factor^3);  % Mass scales with R^3
-m = 0.8652;  % This is the value of expression above^ but we want it fixed
+m = 0.8652/2;  % This is the value of expression above^ but we want it fixed
 %              so we can change the span without worry
 % Ixx = (2.32e-3)*(scaling_factor^5);
 Ixx = 0.009776460905350; % This is the value of expression above^ but we want it fixed
@@ -183,11 +183,11 @@ elseif traj_type == "prescribed_aoa"
     % return a corresponding v(t), a(t), y/z(t) from that.
     
     % Need to solve for an estimate of trim flight:
-    %     x0 = [m*g/2; m*g/2; 0];
-    %     fun = @(x) trim_flight(x, cl_spline, cd_spline, cm_spline, m,g,l, chord, span, rho, eta, R, V_s);
-    %     %     options = optimoptions('fsolve','Display','iter');
-    %     options = optimoptions('fsolve','Display','none');
-    %     [init_conds,~,~,output] = fsolve(fun,x0,options);
+%     x0 = [m*g/2; m*g/2; 0];
+%     fun = @(x) trim_flight(x, cl_spline, cd_spline, cm_spline, m,g,l, chord, span, rho, eta, R, V_s);
+%     %     options = optimoptions('fsolve','Display','iter');
+%     options = optimoptions('fsolve','Display','none');
+%     [init_conds,~,~,output] = fsolve(fun,x0,options);
     
     a_v = 1/2*rho*chord*span*V_s^2/(m*g);
     x0 = 1e-3;
@@ -211,17 +211,15 @@ elseif traj_type == "prescribed_aoa"
         
         alpha_des = alpha_i + aoa_rate*time;
     elseif alpha_traj_type == "parabolic"
-        vertex_time = 15;    % seconds, time location of the vertex of parabola
+        vertex_time = 10;    % seconds, time location of the vertex of parabola 
         end_time = vertex_time + buffer_time;  % seconds
         t_f = end_time;
         time = 0:dt:t_f;
         
         a_coeff = (alpha_i - alpha_f)/((end_time-buffer_time)^2);
         alpha_des = alpha_f + a_coeff*(time-(end_time-buffer_time)).^2;
-        alpha_des(time>(end_time-buffer_time)) = alpha_f;
-        
     elseif alpha_traj_type == "decay"
-        aoa_tau = 5;                        % seconds, time constant of first order decay
+        aoa_tau = 5;                        % seconds, time constant of first order decay 
         %                                     used in alpha_traj_type = "decay"
         end_time = 4*aoa_tau + buffer_time; % seconds, we choose this.
         t_f = end_time;

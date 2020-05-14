@@ -36,6 +36,7 @@ hold on
 plot(time, desired_state(2,:), 'k--', 'linewidth',1)
 ylabel('z [m]','interpreter','latex')
 xlim([0,time(end)])
+ylim([-0.5,0.5])
 grid on
 
 subplot(3,1,3)
