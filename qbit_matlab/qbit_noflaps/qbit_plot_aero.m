@@ -53,10 +53,10 @@ plot(alpha_data, cl_data,'g*','linewidth',1.5)
 hold on
 % plot(alpha, cl, 'r-', 'linewidth',1.5)
 plot(alpha, ppval(cl_spline,alpha), 'k-', 'linewidth', 2)
-xlabel("AoA (deg)")
-ylabel("Lift Coefficient")
-title("Lift")
-% xlim([0,90])
+xlabel("AoA [deg]",'interpreter','latex')
+ylabel("$C_L$",'interpreter','latex')
+% title("Lift")
+% xlim([0,20])
 grid on
 legend("Data", "Spline Interpolation")
 
@@ -65,10 +65,9 @@ plot(alpha_data, cd_data,'g*','linewidth',1.5)
 hold on
 % plot(alpha, cd, 'r-', 'linewidth',1.5)
 plot(alpha, ppval(cd_spline,alpha), 'k-', 'linewidth', 2)
-xlabel("AoA (deg)")
-ylabel("Drag Coefficient")
-title("Drag")
-% xlim([0,90])
+xlabel("AoA [deg]",'interpreter','latex')
+ylabel("$C_D$",'interpreter','latex')
+% title("Drag")
 grid on
 legend("Data", "Spline Interpolation")
 
@@ -77,10 +76,9 @@ plot(alpha_data, cm_data,'g*','linewidth',1.5)
 hold on
 % plot(alpha, cm, 'r-', 'linewidth',1.5)
 plot(alpha, ppval(cm_spline,alpha), 'k-', 'linewidth', 2)
-xlabel("AoA (deg)")
-ylabel("Moment Coefficient")
-title("Pitching Moment")
-% xlim([0,90])
+xlabel("AoA [deg]",'interpreter','latex')
+ylabel("$C_M$",'interpreter','latex')
+% title("Pitching Moment")
 grid on
 legend("Data", "Spline Interpolation")
 

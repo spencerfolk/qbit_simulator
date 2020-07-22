@@ -40,10 +40,10 @@ ylim([-0.5,0.5])
 grid on
 
 subplot(3,1,3)
-plot(time, theta, 'b-','linewidth',1.5)
+plot(time, theta*180/pi, 'b-','linewidth',1.5)
 hold on
-plot(time, ones(size(time))*pi/2, 'k--', 'linewidth', 1)
-ylabel('$\theta$ [rad]','interpreter','latex')
+% plot(time, ones(size(time))*90, 'k--', 'linewidth', 1)
+ylabel('$\theta$ [deg]','interpreter','latex')
 xlim([0,time(end)])
 xlabel("Time [s]",'interpreter','latex')
 grid on
@@ -68,8 +68,8 @@ xlim([0,time(end)])
 grid on
 
 subplot(3,1,3)
-plot(time, thetadot, 'b-','linewidth',1.5)
-ylabel('$\dot{\theta}$ [rad/s]','interpreter','latex')
+plot(time, thetadot*180/pi, 'b-','linewidth',1.5)
+ylabel('$\dot{\theta}$ [deg/s]','interpreter','latex')
 xlim([0,time(end)])
 xlabel("Time [s]",'interpreter','latex')
 grid on
@@ -149,25 +149,25 @@ titl = strcat("Misc Angles, $\eta$ = ",num2str(eta));
 sgtitle(titl,'interpreter','latex')
 
 subplot(3,1,1)
-plot(time, alpha, 'r-','linewidth',1.5)
+plot(time, alpha*180/pi, 'r-','linewidth',1.5)
 hold on
 plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
 plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
-ylabel('$\alpha$ [rad]','interpreter','latex')
+ylabel('$\alpha$ [deg]','interpreter','latex')
 xlim([0,time(end)])
 grid on
 
 subplot(3,1,2)
-plot(time, alpha_e, 'k-','linewidth',1.5)
+plot(time, alpha_e*180/pi, 'k-','linewidth',1.5)
 hold on
 if traj_type == "prescribed_aoa"
-    plot(time, asin(Vi.*sin(alpha_des)./Va), 'k--', 'linewidth', 1.5)
-    plot(time, ones(size(time))*stall_angle*pi/180, 'g--', 'linewidth', 1)
+    plot(time, asin(Vi.*sin(alpha_des)./Va)*180/pi, 'k--', 'linewidth', 1.5)
+    plot(time, ones(size(time))*stall_angle, 'g--', 'linewidth', 1)
     legend("Actual","Desired","Stall")
 end
 % plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
 % plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
-ylabel('$\alpha_e$ [rad]','interpreter','latex')
+ylabel('$\alpha_e$ [deg]','interpreter','latex')
 xlim([0,time(end)])
 grid on
 % maxi = find(alpha_e == max(alpha_e));
@@ -175,11 +175,11 @@ grid on
 % text(end_time/2,-1,strcat("(\alpha_e)_{SS} = ",num2str(mean(alpha_e((end-100):end))),"-rad"))
 
 subplot(3,1,3)
-plot(time, gamma, 'b-','linewidth',1.5)
+plot(time, gamma*180/pi, 'b-','linewidth',1.5)
 hold on
-plot(time, ones(size(time))*pi, 'k--', 'linewidth', 1)
-plot(time, ones(size(time))*(-pi), 'k--', 'linewidth', 1)
-ylabel('$\gamma$ [rad]','interpreter','latex')
+plot(time, ones(size(time))*90, 'k--', 'linewidth', 1)
+plot(time, ones(size(time))*(-90), 'k--', 'linewidth', 1)
+ylabel('$\gamma$ [deg]','interpreter','latex')
 xlim([0,time(end)])
 % xlim([0,18])
 xlabel("Time [s]",'interpreter','latex')

@@ -31,14 +31,19 @@ rho = 1.2;
 
 % CRC 9in prop (CRC-3 from CAD)
 % Compute a scaling factor based on change in wing span:
-span = 0.508;
+span = 2*0.508;  % Doubled for biplane set up
 l = 0.244;
 chord = 0.087;
 R = 4.5*in2m;   % Estimated 9in prop
 
 scaling_factor = span/(15*in2m);
-m = (0.3650)*(scaling_factor^3);  % Mass scales with R^3
-Ixx = (2.32e-3)*(scaling_factor^5);
+% m = (0.3650)*(scaling_factor^3);  % Mass scales with R^3
+m = 0.8652;  % This is the value of expression above^ but we want it fixed
+%              so we can change the span without worry
+% Ixx = (2.32e-3)*(scaling_factor^5);
+Ixx = 0.009776460905350; % This is the value of expression above^ but we want it fixed
+%                          so we can change the span without worry
+
 
 %% Generate Airfoil Look-up
 % This look up table data will be used to estimate lift, drag, moment given
@@ -115,6 +120,10 @@ Vi = zeros(size(time));
 Va = zeros(size(time));
 Vw = zeros(size(time));
 
+% Bookkeeping the airflow over the top and bottom wings
+Vw_top = zeros(size(time));
+Vw_bot = zeros(size(time));
+
 Fdes = zeros(2,length(time));  % Desired force vector
 
 % Power consumption
@@ -180,6 +189,8 @@ for i = 2:length(time)
     
     %     Vw(i-1) = 1.2*sqrt( T_avg/(8*rho*pi*R^2) );
     Vw(i-1) = eta*sqrt( (Vi(i-1)*cos(theta(i-1)-gamma(i-1)))^2 + (T_avg/(0.5*rho*pi*R^2)) );
+    Vw_top(i-1) = eta*sqrt( (Vi(i-1)*cos(theta(i-1)-gamma(i-1)))^2 + (T_top(i-1)/(0.5*rho*pi*R^2)) );
+    Vw_bot(i-1) = eta*sqrt( (Vi(i-1)*cos(theta(i-1)-gamma(i-1)))^2 + (T_bot(i-1)/(0.5*rho*pi*R^2)) );
     
     % Compute true airspeed over the wings using law of cosines
     Va(i-1) = sqrt( Vi(i-1)^2 + Vw(i-1)^2 + 2*Vi(i-1)*Vw(i-1)*cos( alpha(i-1)) );
@@ -272,5 +283,6 @@ data_out = [eta V_s T_top(end) T_bot(end) T_avg theta(end) alpha(end) alpha_e(en
 % fprintf("L = %3.4f\n",mean(L))
 % fprintf("D = %3.4f\n",mean(D))
 % fprintf("M_air = %3.4f\n",mean(M_air))
+% qbit_main_plotting
 
 end

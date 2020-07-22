@@ -27,6 +27,7 @@ i = 1;
 filename = 'testAnimated.gif';
 
 while i<=numel(t)
+    
     start = toc;
     hold off;
     plot(y_d, z_d, 'k:','LineWidth',2);
@@ -97,7 +98,7 @@ while i<=numel(t)
     %         i = next_i(1);
     %     end
     
-    i = i + 10;
+    i = i + 50;
     pause(1e-3);
     
 end

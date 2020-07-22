@@ -31,6 +31,7 @@ p = 3*cd + cl_der;
 q = cd.^2 + cl.^2 + cd.*cl_der - cd_der.*cl;
 
 unstable_conds = find((p.*q < 0) | (p<0 & q<0));
+% unstable_conds = find(9*cd.^2 + 6*cd.*cl_der + cl_der.^2 > 0);
 
 a_v_unstable = a_v(unstable_conds);
 alpha_unstable = alpha(unstable_conds);
@@ -51,13 +52,18 @@ ypts = [9.67 , 9.67 , 14.5, 14.5];
 unstable_region = polyshape(xpts, ypts);
 
 figure()
+% bifurcation points of interest: 
+% high: 3.82, low: 1.18
+% At x = 2.5: 3.63, 12.8, 17.4
 plot(a_v, alpha,'g-','linewidth',2)
 hold on
 plot(a_v_unstable, alpha(unstable_conds), 'r-', 'linewidth',2)
 % plot(unstable_region,'FaceColor','red')
-xlabel("a_v [ ]")
-ylabel("\alpha [deg]")
+xlabel("$a_v$ [ ]",'interpreter','latex')
+ylabel("$\alpha$ [deg]",'interpreter','latex')
 legend("Stable", "Unstable")
+plot(ones(1,2)*3.82,[0,100],'k--','linewidth',1.5)
+plot(ones(1,2)*1.18,[0,100],'k--','linewidth',1.5)
 xlim([0,5])
 grid on
 
@@ -65,8 +71,8 @@ figure()
 plot(alpha, cl, 'g-','linewidth',2)
 hold on
 plot(alpha_unstable, cl(unstable_conds), 'r-', 'linewidth',2)
-xlabel("\alpha [deg]")
-ylabel("Cl")
+xlabel("$\alpha$ [deg]",'interpreter','latex')
+ylabel("$C_L$",'interpreter','latex')
 title("Lift Coefficient")
 grid on
 legend("Stable","Unstable")

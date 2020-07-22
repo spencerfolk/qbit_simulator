@@ -10,7 +10,7 @@ close all
 % Bools / Settings
 aero = true;  % This bool determines whether or not we compute aerodynamic forces
 animate = false; % Bool for making an animation of the vehicle.
-save_animation = false; % Bool for saving the animation as a gif
+save_animation = true; % Bool for saving the animation as a gif
 integrate_method = "rk4";  % Type of integration - either 'euler' or 'rk4'
 traj_type = "prescribed_aoa"; % Type of trajectory:
 %                           "cubic",
@@ -36,7 +36,7 @@ linear_acc = 2;   % m/s^2, the acceleration/decelleration used in
 %                  "increasing" and "decreasing" trajectories
 angular_vel = -1;   % deg/s, the desired change in attitude used by the
 %                  "prescribed_aoa" trajectory
-V_s = 20;          % m/s, set velocity used in "increasing", "decreasing", and
+V_s = 25;          % m/s, set velocity used in "increasing", "decreasing", and
 %                  "trim" trajectories...
 end_time = 5;     % Duration of trajectory, this will be REWRITTEN by all but
 %                  "trim" and "step___" trajectories.
@@ -210,8 +210,9 @@ elseif traj_type == "prescribed_aoa"
         time = 0:dt:t_f;
         
         alpha_des = alpha_i + aoa_rate*time;
+        alpha_des(time>(end_time-buffer_time)) = alpha_f;
     elseif alpha_traj_type == "parabolic"
-        vertex_time = 15;    % seconds, time location of the vertex of parabola
+        vertex_time = 97;    % seconds, time location of the vertex of parabola
         end_time = vertex_time + buffer_time;  % seconds
         t_f = end_time;
         time = 0:dt:t_f;
@@ -234,8 +235,8 @@ elseif traj_type == "prescribed_aoa"
     accel_bool = true;  % Consider acceleration when generating the trajectory
     [y_des, ydot_des, ydotdot_des]=prescribed_aoa_traj_generator(dt,time,alpha_des,cl_spline, cd_spline,rho,m,g,chord,span, accel_bool);
     
-    fprintf("\nTrajectory type: Continuous Constant Height")
-    fprintf("\n-------------------------------------------\n")
+    fprintf("\nTrajectory type: Prescribed AoA")
+    fprintf("\n-------------------------------\n")
     
 elseif traj_type == "stepP" || traj_type == "stepA_hover"
     % For step hover, this is easy, we just need to set our trajectory to
@@ -390,6 +391,7 @@ for i = 2:length(time)
         end
     elseif traj_type == "prescribed_aoa"
         % Take the trajectory generation section and read from there
+        time_temp = round(end_time-buffer_time-dt,2);
         if time(i) < (end_time-buffer_time)
             yzdotdot_temp = [ydotdot_des(i); 0];
             yzdot_temp = [ydot_des(i); 0];
@@ -397,7 +399,7 @@ for i = 2:length(time)
         else
             yzdotdot_temp = [0;0];
             yzdot_temp = [V_s ; 0];
-            yz_temp = [y(time == (end_time-buffer_time-dt)) + V_s*(time(i) - (end_time-buffer_time)) ; 0];
+            yz_temp = [y(time == time_temp) + V_s*(time(i) - (end_time-buffer_time)) ; 0];
         end
     elseif traj_type == "stepA_hover" || traj_type == "stepP"
         yzdotdot_temp = [0 ; 0];
@@ -464,19 +466,19 @@ for i = 2:length(time)
         Ixx, l);
     
     if integrate_method == "euler"
-        %%%%%%%%%%% Euler Integration
-        %         ydotdot(i) = ((T_top(i) + T_bot(i))*cos(theta(i-1)) - D(i-1)*cos(theta(i-1) - alpha_e(i-1)) - L(i-1)*sin(theta(i-1) - alpha_e(i-1)))/m;
-        %         zdotdot(i) = ( -m*g + (T_top(i) + T_bot(i))*sin(theta(i-1)) - D(i-1)*sin(theta(i-1) - alpha_e(i-1)) + L(i-1)*cos(theta(i-1) - alpha_e(i-1)))/m;
-        %         thetadotdot(i) = (M_air(i-1) + l*(T_bot(i) - T_top(i)))/Ixx;
-        %
-        %         % Euler integration
-        %         ydot(i) = ydot(i-1) + ydotdot(i)*dt;
-        %         zdot(i) = zdot(i-1) + zdotdot(i)*dt;
-        %         thetadot(i) = thetadot(i-1) + thetadotdot(i)*dt;
-        %
-        %         y(i) = y(i-1) + ydot(i)*dt;
-        %         z(i) = z(i-1) + zdot(i)*dt;
-        %         theta(i) = theta(i-1) + thetadot(i)*dt;
+        %%%%%%%%%% Euler Integration
+        ydotdot(i) = ((T_top(i) + T_bot(i))*cos(theta(i-1)) - D(i-1)*cos(theta(i-1) - alpha_e(i-1)) - L(i-1)*sin(theta(i-1) - alpha_e(i-1)))/m;
+        zdotdot(i) = ( -m*g + (T_top(i) + T_bot(i))*sin(theta(i-1)) - D(i-1)*sin(theta(i-1) - alpha_e(i-1)) + L(i-1)*cos(theta(i-1) - alpha_e(i-1)))/m;
+        thetadotdot(i) = (M_air(i-1) + l*(T_bot(i) - T_top(i)))/Ixx;
+        
+        % Euler integration
+        ydot(i) = ydot(i-1) + ydotdot(i)*dt;
+        zdot(i) = zdot(i-1) + zdotdot(i)*dt;
+        thetadot(i) = thetadot(i-1) + thetadotdot(i)*dt;
+        
+        y(i) = y(i-1) + ydot(i)*dt;
+        z(i) = z(i-1) + zdot(i)*dt;
+        theta(i) = theta(i-1) + thetadot(i)*dt;
         
     elseif integrate_method == "rk4"
         %%%%%%%%%%% 4th-Order Runge Kutta:
@@ -562,6 +564,7 @@ end
 
 %% Plotting
 qbit_main_plotting()
+
 
 %% Dynamics Function
 function xdot = dynamics(x, m, g, Ixx, l, T_top, T_bot, L, D, M_air, alpha_e)
