@@ -12,7 +12,7 @@ aero = true;  % This bool determines whether or not we compute aerodynamic force
 animate = false; % Bool for making an animation of the vehicle.
 save_animation = true; % Bool for saving the animation as a gif
 integrate_method = "rk4";  % Type of integration - either 'euler' or 'rk4'
-traj_type = "prescribed_aoa"; % Type of trajectory:
+traj_type = "trim"; % Type of trajectory:
 %                           "cubic",
 %                           "trim" (for steady state flight),
 %                           "increasing" (const acceleration)
@@ -315,6 +315,7 @@ Vw_top = zeros(size(time));
 Vw_bot = zeros(size(time));
 
 Fdes = zeros(2,length(time));  % Desired force vector
+rdotdot_des = zeros(2,length(time));
 
 % Power consumption
 Ptop = zeros(size(time));
@@ -461,7 +462,7 @@ for i = 2:length(time)
     
     
     % Controller
-    [T_top(i), T_bot(i), Fdes(:,i)] = qbit_controller(current_state, ...
+    [T_top(i), T_bot(i), Fdes(:,i), rdotdot_des(:,i)] = qbit_controller(current_state, ...
         desired_state(:,i), L(i-1), D(i-1), M_air(i-1), alpha_e(i-1), m, ...
         Ixx, l);
     

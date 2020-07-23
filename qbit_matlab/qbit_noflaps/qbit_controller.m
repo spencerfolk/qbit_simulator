@@ -1,7 +1,7 @@
 %%% This function will output thrust commands based on a nonlinear
 %%% geometric controller that tracks orientation [theta] and position [x,z].
 %%% Spencer Folk 2020
-function [T_top, T_bot, Fdes] = qbit_controller(current_state, desired_state, L, D, M_air, alpha_e, m, Ixx, l)
+function [T_top, T_bot, Fdes, rdotdot_des] = qbit_controller(current_state, desired_state, L, D, M_air, alpha_e, m, Ixx, l)
 
 % INPUTS -
 % current_state = [x z theta xdot zdot thetadot]'
